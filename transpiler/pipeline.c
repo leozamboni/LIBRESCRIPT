@@ -148,9 +148,9 @@ _Bool is_number(char *s)
 size_t get_token_id(char *t_str)
 {
     if IS_TOKEN(SEMICOLON_DEF)      return SEMICOLON_;
-    else if IS_TOKEN(LEFT_CURL)     return LEFT_CURL;
-    else if IS_TOKEN(RIGHT_CURL)    return RIGHT_CURL;
-    else if IS_TOKEN(DECORATOR)     return DECORATOR;
+    else if IS_TOKEN(LEFT_CURL_DEF)     return LEFT_CURL;
+    else if IS_TOKEN(RIGHT_CURL_DEF)    return RIGHT_CURL;
+    else if IS_TOKEN(DECORATOR_DEF)     return DECORATOR;
     else if IS_TOKEN(INT8_DEF)      return INT8_T;
     else if IS_TOKEN(INT16_DEF)     return INT16_T;
     else if IS_TOKEN(INT32_DEF)     return INT32_T;
@@ -181,6 +181,7 @@ size_t get_token_id(char *t_str)
 
 _Bool lex(FILE *f, Queue *tokens)
 {
+    _Bool quotation = 0;
     size_t t = 0,i = 0;
     char c, aux[126], str[126];
 
@@ -189,7 +190,8 @@ _Bool lex(FILE *f, Queue *tokens)
         aux[i++]=c;
 		if(c == ' ' || c == '\n' || c == '(' || c == ')' || c == '\'' || c == '!' || c == '@')
 		{ 
-            if (c == ' ' || (i > 1 && c == '\'') || c == '!') i--;
+            if (c == ' ' && (!quotation) || (i > 1 && c == '\'') || c == '!') i--;
+            if (c == '\'') quotation = !quotation;
             aux[i]='\0';
 
             strcpy(str,aux);
@@ -214,12 +216,13 @@ _Bool lex(FILE *f, Queue *tokens)
     return 0;
 }
 
-_Bool type_char_parser_tree(Node *f, Node *w, Queue *ast)
+_Bool type_str_parser_tree(Node *f, Node *w, Queue *ast)
 {
     PUSH_PARSERED_TOKEN("char",CHAR_T)
     if NEXT_IS_NULL return 1;
     if (!IS_TOKEN_ID(ID)) ERROR(w->token_str,"expected var name")
     else {
+        PUSH_PARSERED_TOKEN("*",ID)
         PUSH_PARSERED_TOKEN(w->token_str,ID)
         if NEXT_IS_NULL return 1;
         if (!IS_TOKEN_ID(ASSIGNMENT_OP)) ERROR(w->token_str,"expected :3 operator")
@@ -232,7 +235,7 @@ _Bool type_char_parser_tree(Node *f, Node *w, Queue *ast)
                 if NEXT_IS_NULL return 1;
                 if (!IS_TOKEN_ID(ID)) ERROR(w->token_str,"expected string")
                 else {
-                    while IS_TOKEN_ID(ID)
+                    while (!IS_TOKEN_ID(QUOTATION_OP))
                     {
                         PUSH_PARSERED_TOKEN(w->token_str,ID)
                         if NEXT_IS_NULL return 1;
@@ -287,9 +290,8 @@ _Bool def_parser_tree(Node *f, Node *w, Queue *ast)
                         case RIGHT_CURL:
                             PUSH_PARSERED_TOKEN("}",RIGHT_CURL);
                             return 0;
-                        case CHAR_T:
-                            r = type_char_parser_tree(f,w,ast); 
-                            if (r) return 1;
+                        case STRING_T:
+                            type_str_parser_tree(f,w,ast); 
                             break;
                     }
                     w = w->n;
@@ -297,6 +299,39 @@ _Bool def_parser_tree(Node *f, Node *w, Queue *ast)
             }
         }
     }
+}
+
+_Bool printf_parser_tree(Node *f, Node *w, Queue *ast)
+{
+    PUSH_PARSERED_TOKEN("printf(",PRINTF_F);
+    if NEXT_IS_NULL return 1;
+    if IS_TOKEN_ID(QUOTATION_OP)
+    {
+        PUSH_PARSERED_TOKEN("\"",QUOTATION_OP)
+        if NEXT_IS_NULL return 1;
+        while (!IS_TOKEN_ID(QUOTATION_OP))
+        {
+            PUSH_PARSERED_TOKEN(w->token_str,ID)
+            if NEXT_IS_NULL return 1;
+        }
+        if (!IS_TOKEN_ID(QUOTATION_OP)) ERROR(w->token_str,"expected \' operator")
+        else {
+            PUSH_PARSERED_TOKEN("\")",QUOTATION_OP)
+            if NEXT_IS_NULL return 1;
+            if (!IS_TOKEN_ID(SEMICOLON_)) ERROR(w->token_str,"expected !")
+            else PUSH_PARSERED_TOKEN(";",SEMICOLON_)
+        }
+    }
+    else if IS_TOKEN_ID(ID)
+    {
+        PUSH_PARSERED_TOKEN("\"%s\",",PRINTF_F)
+        PUSH_PARSERED_TOKEN(w->token_str,ID)
+        if NEXT_IS_NULL return 1;
+        if (!IS_TOKEN_ID(SEMICOLON_)) ERROR(w->token_str,"expected !")
+        else PUSH_PARSERED_TOKEN(");",PRINTF_F)
+    }
+    else return 1;
+    return 0;
 }
 
 _Bool parser(Node *f, Queue *ast)
@@ -308,13 +343,50 @@ _Bool parser(Node *f, Queue *ast)
     {
         switch (w->token_id)
         {
-            case CHAR_T:
-                r = type_char_parser_tree(f,w,ast); 
+            case DEF_F:
+                r = def_parser_tree(f,w,ast);
                 if (r) return 1;
                 break;
-            case DEF:
+            case STRING_T:
+                r = type_str_parser_tree(f,w,ast); 
+                if (r) return 1;
+                break;
+            case PRINTF_F:
+                r = printf_parser_tree(f,w,ast);
+                if (r) return 1;
+                break;
         }
         w = w->n;
     }
     return 0;
+}
+
+void output_queue_f(Node *f, FILE *fgcc) 
+{
+  	if (!f) return;
+  	fprintf(fgcc,"%s",f->token_str);
+  	output_queue_f(f->n,fgcc);  
+}
+
+int main(void)
+{
+    FILE *f = fopen("file.neko","r");
+    FILE *gcc = fopen("a.c","w");
+
+    Queue *t = queue_create();
+    Queue *ast = queue_create();
+
+    fprintf(gcc,"#include <stdio.h>\nint main(void) { ");
+    if (lex(f,t)) puts("lex error");
+    if (parser(t->f,ast)) puts(" parser error");
+
+    output_queue_f(ast->f,gcc);
+
+    fprintf(gcc,"}");
+    fclose(gcc);
+
+    system("gcc -o a a.c");
+    system("./a");
+
+	fclose(f);
 }
