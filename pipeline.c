@@ -132,8 +132,6 @@ _Bool lex(FILE *f, Queue *tokens)
 
 _Bool parser(Node *f, Queue *ast)
 {
-    
-
     Node *w = f;
     while (w)
     {
@@ -189,7 +187,7 @@ _Bool parser(Node *f, Queue *ast)
 
 int main(void)
 {
-    FILE *f = fopen("file.ear","r");
+    FILE *f = fopen("file.neko","r");
     FILE *fgcc = fopen("a.c","w");
     Queue *tokens = create_queue();
     Queue *ast = create_queue();
