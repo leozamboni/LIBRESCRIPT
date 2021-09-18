@@ -1,3 +1,7 @@
+/*
+ * TODO:
+ * lista de variaveis com respectivos tipos para verificao de atribuicao e saida de dados. 
+ */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -13,6 +17,8 @@ enum tokens_enum {
     LEFT_CURL,
     RIGHT_CURL,
     DECORATOR,
+    TRUE,
+    FALSE,
     /* Types */
     VOID_T,
     INT8_T,
@@ -53,6 +59,8 @@ static TkTable_t look_table[] = {
     { LEFT_CURL, "\"" }, 
     { RIGHT_CURL, "\"" }, 
     { DECORATOR, "@" },
+    { TRUE, "tru" },
+    { FALSE, "fake" },
     { VOID_T, "vud" },
     { INT8_T, "ak_46" },
     { INT16_T, "ak_47" },
@@ -148,7 +156,7 @@ _Bool lex(FILE *f, Queue_t *tk)
     while((c = getc(f)) != EOF) 
 	{ 
         tk_str_aux[i++]=c;
-		if(c == ' ' || c == '\n' || c == '(' || c == ')' || c == '\'' || c == '!' || c == '@')
+		if(c == ' ' || c == '\n' || c == '\'' || c == '!' || c == '@')
 		{ 
             if ((c == ' ' && (!quot)) || (i > 1 && c == '\'') || c == '!') 
             {
@@ -187,17 +195,81 @@ _Bool lex(FILE *f, Queue_t *tk)
 }
 
 /* 
- * Actions 
+ * Parser 
  */
+
+_Bool _ak_46(Node_t *out, Queue_t *ast)
+{
+    push(ast, "int8_t ", out->tk_id, out->tk_line);
+    out = out->n;
+
+    if ((out) && out->tk_id == ID)
+    {
+        push(ast, out->tk_str, out->tk_id, out->tk_line);
+        out = out->n;
+
+        if ((out) && out->tk_id == ASSIGNMENT_OP)
+        {
+            push(ast, "=", ASSIGNMENT_OP, out->tk_line);
+            out = out->n;
+            // TODO: check var existence
+            if ((out) && out->tk_id == ID) { 
+                push(ast, out->tk_str, out->tk_id, out->tk_line);
+                out = out->n;
+
+                if ((out) && out->tk_id == SEMICOLON) 
+                {
+                    push(ast, ";", SEMICOLON, out->tk_line);
+                    return 0;
+                } else if ((out) && out->tk_id >= SUM_OP && out->tk_id <= DIV_OP) {
+                    while (out->tk_id != SEMICOLON)
+                    {
+                        if (out->tk_id >= SUM_OP && out->tk_id <= DIV_OP)
+                        {
+                            push(ast, out->tk_str, out->tk_id, out->tk_line);
+                            out = out->n;
+                        } else {
+                            fprintf(stderr, "error '%s', expected '!' expression in line %ld", out->tk_str, out->tk_line);
+                            return 1;
+                        }
+
+                        if ((out) && out->tk_id == ID)
+                        {
+                            push(ast, out->tk_str, out->tk_id, out->tk_line);
+                            out = out->n;
+                            if (!out) return 1;
+
+                        } else if (!out) {
+                            return 1;
+                        } else {
+                            fprintf(stderr, "error '%s', unexpected expression in line %ld", out->tk_str, out->tk_line);
+                            return 1;
+                        }
+                    }
+                    push(ast, ";", SEMICOLON, out->tk_line);
+                    return 0;
+                } else {
+                    fprintf(stderr, "error '%s', expected '!' expression in line %ld", out->tk_str, out->tk_line);
+                }
+            } else {
+                fprintf(stderr, "error '%s', expected var assign in line %ld", out->tk_str, out->tk_line);
+            }
+        } else {
+            fprintf(stderr, "error '%s', expected ':3' expression in line %ld", out->tk_str, out->tk_line);
+        }
+    } else {
+        fprintf(stderr, "error '%s', expected var name in line %ld", out->tk_str, out->tk_line);
+    }
+    return 1;
+}
 
 _Bool _m4a1_colt(Node_t *out, Queue_t *ast)
 {
-    push(ast, "char", out->tk_id, out->tk_line);
+    push(ast, "char*", STRING_T, out->tk_line);
     out = out->n;
     
     if ((out) && out->tk_id == ID)
     {
-        push(ast, "*", ID, out->tk_line);
         push(ast, out->tk_str, out->tk_id, out->tk_line);
         out = out->n;
 
@@ -252,12 +324,12 @@ _Bool _m4a1_colt(Node_t *out, Queue_t *ast)
 
 _Bool _show_this(Node_t *out, Queue_t *ast)
 {
-    push(ast, "printf(", out->tk_id, out->tk_line);
+    push(ast, "printf(", STRING_T, out->tk_line);
     out = out->n;
 
     if ((out) && out->tk_id == QUOTATION_OP)
     {
-        push(ast, "\"", out->tk_id, out->tk_line);
+        push(ast, "\"", QUOTATION_OP, out->tk_line);
         out = out->n;
 
         if (out)
@@ -270,12 +342,12 @@ _Bool _show_this(Node_t *out, Queue_t *ast)
             }
             if (out->tk_id == QUOTATION_OP)
             {   
-                push(ast, "\")", out->tk_id, out->tk_line);
+                push(ast, "\")", QUOTATION_OP, out->tk_line);
                 out = out->n;
 
                 if ((out) && out->tk_id == SEMICOLON)
                 {
-                    push(ast, ";", out->tk_id, out->tk_line);
+                    push(ast, ";", SEMICOLON, out->tk_line);
                     return 0;
                 } else {
                     fprintf(stderr, "error '%s', expected '!' expression in line %ld", out->tk_str, out->tk_line);
@@ -293,7 +365,7 @@ _Bool _show_this(Node_t *out, Queue_t *ast)
 
         if ((out) && out->tk_id == SEMICOLON)
         {
-            push(ast, ");", ID, out->tk_line);
+            push(ast, ");", SEMICOLON, out->tk_line);
             return 0;
         } else {
             fprintf(stderr, "error '%s', expected '!' expression in line %ld", out->tk_str, out->tk_line);
@@ -312,12 +384,16 @@ _Bool parser(Node_t *out, Queue_t *ast)
     {
         switch (out->tk_id)
         {
-            case DEF:
-                //r = _def(out,ast);
+            case INT8_T:
+                r = _ak_46(out,ast);
                 if (r) return 1;
                 break;
             case STRING_T:
                 r = _m4a1_colt(out,ast); 
+                if (r) return 1;
+                break;
+            case DEF:
+                //r = _def(out,ast);
                 if (r) return 1;
                 break;
             case PRINTF_F:

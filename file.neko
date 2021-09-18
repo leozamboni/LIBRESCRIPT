@@ -1,3 +1,6 @@
 m4a1_colt hello :3 'Hello, world!'!
 
+ak_46 var :3 1!
+ak_46 var2 :3 var2 + var! 
+
 show_this hello!
