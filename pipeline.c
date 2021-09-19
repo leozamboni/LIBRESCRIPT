@@ -1,11 +1,32 @@
-/*
- * TODO:
- * lista de variaveis com respectivos tipos para verificao de atribuicao e saida de dados. 
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+
+#define exit_error(err, out) fprintf(stderr, "ToT\nerror '%s', %s in line %d.\n", out->tk_str, err, out->tk_line); \
+    return 1;
+
+/*
+ * Syntax parser error handling
+ */
+#define ERROR1 "unexpected expression"
+#define ERROR3 "expected '!' expression"
+#define ERROR4 "expected ':3' expression"
+#define ERROR5 "expected ''' expression"
+
+/*
+ * Variables parser error handling
+ */
+#define ERROR_VAR1 "unallocated variable"
+#define ERROR_VAR2 "expected var name"
+
+/*
+ * Types parser error handling
+ */
+#define ERROR_M4A1_COLT "expected m4a1_colt value"
+#define ERROR_AK_46 "expected ak_46 value"
+
+#define warning(war, str, line) fprintf(stderr, "-_q\nwarning '%s', %s in line %d.\n", str, war, line);
 
 #define NTKS (sizeof(look_table)/sizeof(TkTable_t))
 
@@ -217,7 +238,7 @@ _Bool lex(FILE *f, TkQueue_t *tk)
         tk_str_aux[i++] = c;
 		if(c == ' ' || c == '\n' || c == '\'' || c == '!' || c == '@')
 		{ 
-            if ((c == ' ' && (!quot)) || (i > 1 && c == '\'') || c == '!') 
+            if ((c == ' ' && (!quot)) || (i > 1 && c == '\'') || c == '!' || c == '\n') 
             {
                 i--;
             }
@@ -232,11 +253,9 @@ _Bool lex(FILE *f, TkQueue_t *tk)
 
             tk_str_aux[i]='\0';
             strcpy(tk_str,tk_str_aux);
-
             t = get_tk_id(tk_str);
-            if (!t) return 1;
 
-            if (tk_str[0] != '\0' && c != '\n')
+            if (tk_str[0] != '\0' && tk_str[0] != '\n')
             {
                 push(tk,tk_str,t,tk_l);
             }
@@ -257,8 +276,10 @@ _Bool lex(FILE *f, TkQueue_t *tk)
  * Parser 
  */
 
-_Bool _ak_46(TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list)
+_Bool _ak_46(TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list)
 {
+    TkNode_t *out = *(lex_out);
+
     push(ast, "int8_t ", out->tk_id, out->tk_line);
     out = out->n;
 
@@ -275,16 +296,13 @@ _Bool _ak_46(TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list)
             
             if ((out) && out->tk_id == ID) {
                 if (strchr(out->tk_str,'.')) {
-                    fprintf(stderr, "error '%s', unexpected expression in line %d.\n", out->tk_str, out->tk_line);
-                    return 1;
+                    exit_error(ERROR1, out);
                 } else if (!(is_number(out->tk_str))) {
                     if (!(check_var(var_list->out, out->tk_str)))
                     {
-                        fprintf(stderr, "error '%s', unallocated variable in line %d.\n", out->tk_str, out->tk_line);
-                        return 1;
-                    } else if (!(check_var_id(var_list->out, out->tk_id))) {
-                        fprintf(stderr, "error '%s', expected ak_46 in line %d.\n", out->tk_str, out->tk_line);
-                        return 1;
+                        exit_error(ERROR_VAR1, out);
+                    } else if (!(check_var_id(var_list->out, INT8_T))) {
+                        exit_error(ERROR_AK_46, out);
                     }
                 }
                 push(ast, out->tk_str, out->tk_id, out->tk_line);
@@ -293,6 +311,7 @@ _Bool _ak_46(TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list)
                 if ((out) && out->tk_id == SEMICOLON) 
                 {
                     push(ast, ";", SEMICOLON, out->tk_line);
+                    *(lex_out) = out;
                     return 0;
                 } else if ((out) && out->tk_id >= SUM_OP && out->tk_id <= DIV_OP) {
                     while (out->tk_id != SEMICOLON)
@@ -302,23 +321,19 @@ _Bool _ak_46(TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list)
                             push(ast, out->tk_str, out->tk_id, out->tk_line);
                             out = out->n;
                         } else {
-                            fprintf(stderr, "error '%s', expected '!' expression in line %d.\n", out->tk_str, out->tk_line);
-                            return 1;
+                            exit_error(ERROR3, out);
                         }
                         if ((out) && out->tk_id == ID)
                         {
                             if (strchr(out->tk_str,'.'))
                             {
-                                fprintf(stderr, "error '%s', unexpected expression in line %d.\n", out->tk_str, out->tk_line);
-                                return 1;
+                                exit_error(ERROR1, out);
                             } else if (!(is_number(out->tk_str))) {
                                 if (!(check_var(var_list->out, out->tk_str)))
                                 {
-                                    fprintf(stderr, "error '%s', unallocated variable in line %d.\n", out->tk_str, out->tk_line);
-                                    return 1;
-                                } else if (!(check_var_id(var_list->out, out->tk_id))) {
-                                    fprintf(stderr, "error '%s', expected ak_46 in line %d.\n", out->tk_str, out->tk_line);
-                                    return 1;
+                                    exit_error(ERROR_VAR1, out);
+                                } else if (!(check_var_id(var_list->out, INT8_T))) {
+                                    exit_error(ERROR_AK_46, out);
                                 }
                             }
                             push(ast, out->tk_str, out->tk_id, out->tk_line);
@@ -327,29 +342,31 @@ _Bool _ak_46(TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list)
                         } else if (!out) {
                             return 1;
                         } else {
-                            fprintf(stderr, "error '%s', unexpected expression in line %d.\n", out->tk_str, out->tk_line);
-                            return 1;
+                            exit_error(ERROR1, out);
                         }
                     }
                     push(ast, ";", SEMICOLON, out->tk_line);
+                     *(lex_out) = out;
                     return 0;
                 } else {
-                    fprintf(stderr, "error '%s', expected '!' expression in line %d.\n", out->tk_str, out->tk_line);
+                    exit_error(ERROR3, out);
                 }
             } else {
-                fprintf(stderr, "error '%s', expected var assign in line %d.\n", out->tk_str, out->tk_line);
+                exit_error(ERROR_AK_46, out);
             }
         } else {
-            fprintf(stderr, "error '%s', expected ':3' expression in line %d.\n", out->tk_str, out->tk_line);
+            exit_error(ERROR4, out);
         }
     } else {
-        fprintf(stderr, "error '%s', expected var name in line %d.\n", out->tk_str, out->tk_line);
+        exit_error(ERROR_VAR2, out);
     }
     return 1;
 }
 
-_Bool _m4a1_colt(TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list)
+_Bool _m4a1_colt(TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list)
 {
+    TkNode_t *out = *(lex_out);
+
     push(ast, "char*", STRING_T, out->tk_line);
     out = out->n;
     
@@ -386,28 +403,26 @@ _Bool _m4a1_colt(TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list)
                         if ((out) && out->tk_id == SEMICOLON)
                         {
                             push(ast, ";", SEMICOLON, out->tk_line);
+                            *(lex_out) = out;
                             return 0;
                         } else {
-                            fprintf(stderr, "error '%s', expected '!' expression in line %d.\n", out->tk_str, out->tk_line);
+                            exit_error(ERROR3, out);
                         }
                     } else {
-                        fprintf(stderr, "error '%s', expected ''' expression in line %d.\n", out->tk_str, out->tk_line);
+                        exit_error(ERROR5, out);
                     }
                 } else {
-                    fprintf(stderr, "error '%s', expected var content in line %d.\n", out->tk_str, out->tk_line);
+                    exit_error(ERROR_M4A1_COLT, out);
                 }
             } else if ((out) && out->tk_id == ID) {
                 if (is_number(out->tk_str)) 
                 {
-                    fprintf(stderr, "error '%s', expected m4a1_colt in line %d.\n", out->tk_str, out->tk_line);
-                    return 1;
+                    exit_error(ERROR_M4A1_COLT, out);
                 }
                 else if (!check_var(var_list->out, out->tk_str)) {
-                    fprintf(stderr, "error '%s', unallocated variable in line %d.\n", out->tk_str, out->tk_line);
-                    return 1;
+                    exit_error(ERROR_VAR1, out);
                 } else if (!(check_var_id(var_list->out, out->tk_id))) {
-                    fprintf(stderr, "error '%s', expected m4a1_colt in line %d.\n", out->tk_str, out->tk_line);
-                    return 1;
+                    exit_error(ERROR_M4A1_COLT, out);
                 }
 
                 push(ast, out->tk_str, out->tk_id, out->tk_line);
@@ -416,24 +431,29 @@ _Bool _m4a1_colt(TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list)
                 if ((out) && out->tk_id == SEMICOLON)
                 {
                     push(ast, ";", SEMICOLON, out->tk_line);
+                     *(lex_out) = out;
                     return 0;
                 } else {
-                    fprintf(stderr, "error '%s', expected '!' expression in line %d.\n", out->tk_str, out->tk_line);
+                    exit_error(ERROR3, out);
                 }
             } else {
-                fprintf(stderr, "error '%s', expected m4a1_colt in line %d.\n", out->tk_str, out->tk_line);
+                exit_error(ERROR_M4A1_COLT, out);
             }
         } else {
-            fprintf(stderr, "error '%s', expected ':3' expression in line %d.\n", out->tk_str, out->tk_line);
+            exit_error(ERROR4, out);
         }
     } else {
-        fprintf(stderr, "error '%s', expected var name in line %d.\n", out->tk_str, out->tk_line);
+        exit_error(ERROR_VAR2, out);
     }
     return 1;
 }
 
-_Bool _show_this(TkNode_t *out, TkQueue_t *ast) // TODO: check id type in no quotation print 
+// TODO: check id type in no quotation printf
+// TODO: create stdio lib with printf after main functions
+_Bool _show_this(TkNode_t **lex_out, TkQueue_t *ast)  
 {
+    TkNode_t *out = *(lex_out);
+
     push(ast, "printf(", STRING_T, out->tk_line);
     out = out->n;
 
@@ -458,6 +478,7 @@ _Bool _show_this(TkNode_t *out, TkQueue_t *ast) // TODO: check id type in no quo
                 if ((out) && out->tk_id == SEMICOLON)
                 {
                     push(ast, ";", SEMICOLON, out->tk_line);
+                    *(lex_out) = out;
                     return 0;
                 } else {
                     fprintf(stderr, "error '%s', expected '!' expression in line %d.\n", out->tk_str, out->tk_line);
@@ -476,6 +497,7 @@ _Bool _show_this(TkNode_t *out, TkQueue_t *ast) // TODO: check id type in no quo
         if ((out) && out->tk_id == SEMICOLON)
         {
             push(ast, ");", SEMICOLON, out->tk_line);
+             *(lex_out) = out;
             return 0;
         } else {
             fprintf(stderr, "error '%s', expected '!' expression in line %d.\n", out->tk_str, out->tk_line);
@@ -495,11 +517,11 @@ _Bool parser(TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list)
         switch (out->tk_id)
         {
             case INT8_T:
-                r = _ak_46(out, ast, var_list);
+                r = _ak_46(&out, ast, var_list);
                 if (r) return 1;
                 break;
             case STRING_T:
-                r = _m4a1_colt(out,ast, var_list); 
+                r = _m4a1_colt(&out,ast, var_list); 
                 if (r) return 1;
                 break;
             case DEF:
@@ -507,8 +529,11 @@ _Bool parser(TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list)
                 //if (r) return 1;
                 break;
             case PRINTF_F:
-                r = _show_this(out,ast);
+                r = _show_this(&out,ast);
                 if (r) return 1;
+                break;
+            default:
+                warning("unexpected expression", out->tk_str, out->tk_id);
                 break;
         }
         out = out->n;
@@ -527,7 +552,7 @@ int main(void)
     //fprintf(gcc,"#include <stdio.h>\nint main(void) { ");
     if (lex(f,tk)) puts("lex error");
     if (parser(tk->out, ast, var_list)) puts("\t^ parser error");
-    output_var(var_list->out);
+    //output_var(var_list->out);
   
     output(tk->out);
     puts("");
