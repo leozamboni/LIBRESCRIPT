@@ -307,6 +307,91 @@ lex (FILE *f, TkQueue_t *tk)
  * Parser
  */
 _Bool
+boolean (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
+         char *str)
+{
+    TkNode_t *out = *(lex_out);
+
+    push (ast, str, out->tk_id, out->tk_line);
+    out = out->n;
+
+    if ((out) && out->tk_id == ID)
+        {
+            if (check_var (var_list->out, out->tk_str))
+                {
+                    exit_error (ERROR_VAR4, out);
+                }
+
+            push_var (var_list, out->tk_str, id);
+            push (ast, out->tk_str, out->tk_id, out->tk_line);
+            out = out->n;
+
+            if ((out) && out->tk_id == ASSIGNMENT)
+                {
+                    push (ast, "=", ASSIGNMENT, out->tk_line);
+                    out = out->n;
+
+                    if (((out) && out->tk_id == TRUE)
+                        || ((out) && out->tk_id == FALSE)
+                        || ((out) && out->tk_id == ID))
+                        {
+                            if (!(is_number (out->tk_str))
+                                && out->tk_id != FALSE && out->tk_id != TRUE)
+                                {
+                                    if (!(check_var (var_list->out,
+                                                     out->tk_str)))
+                                        {
+                                            exit_error (ERROR_VAR1, out);
+                                        }
+                                    else if (!(check_var_id (var_list->out,
+                                                             out->tk_str, id)))
+                                        {
+                                            exit_error (ERROR_VAR3, out);
+                                        }
+                                }
+
+                            if (out->tk_id == FALSE || out->tk_id == TRUE
+                                || out->tk_str[0] == '1'
+                                || out->tk_str[0] == '0')
+                                {
+                                    push (ast, out->tk_str, out->tk_id,
+                                          out->tk_line);
+                                    out = out->n;
+                                }
+                            else
+                                {
+                                    exit_error (ERROR_VAR3, out);
+                                }
+
+                            if ((out) && out->tk_id == SEMICOLON)
+                                {
+                                    push (ast, ";", SEMICOLON, out->tk_line);
+                                    *(lex_out) = out;
+                                    return 0;
+                                }
+                            else
+                                {
+                                    exit_error (ERROR2, out);
+                                }
+                        }
+                    else
+                        {
+                            exit_error (ERROR_VAR3, out);
+                        }
+                }
+            else
+                {
+                    exit_error (ERROR3, out);
+                }
+        }
+    else
+        {
+            exit_error (ERROR_VAR2, out);
+        }
+    return 1;
+}
+
+_Bool
 floating (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
           char *str)
 {
@@ -788,6 +873,9 @@ parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list)
                     break;
                 case STRING_T:
                     r = character (&out, ast, var_list, STRING_T, "char * ");
+                    break;
+                case BOOL_T:
+                    r = boolean (&out, ast, var_list, BOOL_T, "_Bool ");
                     break;
                 default:
                     if (out->tk_id != ID)
