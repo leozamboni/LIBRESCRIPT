@@ -1,3 +1,6 @@
+i_hate_this float :3 1.2!
+idfc double :3 1.5!
+
 ak_46 int8_t :3 1!
 ak_47 int16_t :3 2!
 ak_47s int32_t :3 3!
@@ -8,3 +11,6 @@ UwU_ak_47 uint16_t :3 2!
 i_love_int size_t :3 25!
 UwU_ak_47s uint32_t :3 3!
 UwU_rpk uint64_t :3 4!
+
+m4 char :3 'a'!
+m4a1_colt string :3 'ddasda'!

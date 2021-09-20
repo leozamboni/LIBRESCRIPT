@@ -335,8 +335,35 @@ floating (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
                         {
                             if (!(is_number (out->tk_str)))
                                 {
-                                    if (!(check_var (var_list->out,
-                                                     out->tk_str)))
+                                    if (strchr (out->tk_str, '.'))
+                                        {
+                                            _Bool dot = 0;
+                                            size_t i;
+
+                                            for (i = 0;
+                                                 i < strlen (out->tk_str); ++i)
+                                                {
+                                                    if (dot
+                                                        && out->tk_str[i]
+                                                               == '.')
+                                                        break;
+                                                    if (out->tk_str[i] == '.')
+                                                        {
+                                                            dot = 1;
+                                                            continue;
+                                                        }
+                                                    if (!(isdigit (
+                                                            out->tk_str[i])))
+                                                        break;
+                                                }
+                                            if (i != strlen (out->tk_str))
+                                                {
+                                                    exit_error (ERROR_VAR3,
+                                                                out);
+                                                }
+                                        }
+                                    else if (!(check_var (var_list->out,
+                                                          out->tk_str)))
                                         {
                                             exit_error (ERROR_VAR1, out);
                                         }
@@ -585,11 +612,12 @@ integer (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
 }
 
 _Bool
-_m4a1_colt (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list)
+character (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
+           char *str)
 {
     TkNode_t *out = *(lex_out);
 
-    push (ast, "char*", STRING_T, out->tk_line);
+    push (ast, str, id, out->tk_line);
     out = out->n;
 
     if ((out) && out->tk_id == ID)
@@ -599,7 +627,7 @@ _m4a1_colt (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list)
                     exit_error (ERROR_VAR4, out);
                 }
 
-            push_var (var_list, out->tk_str, STRING_T);
+            push_var (var_list, out->tk_str, id);
             push (ast, out->tk_str, out->tk_id, out->tk_line);
             out = out->n;
 
@@ -615,7 +643,23 @@ _m4a1_colt (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list)
 
                             if ((out) && out->tk_id == ID)
                                 {
-                                    while (out->tk_id != QUOTATION)
+                                    if (id == STRING_T)
+                                        {
+                                            while (out->tk_id != QUOTATION)
+                                                {
+                                                    push (ast, out->tk_str,
+                                                          out->tk_id,
+                                                          out->tk_line);
+                                                    out = out->n;
+                                                    if (!out)
+                                                        return 1;
+                                                }
+                                        }
+                                    else if (strlen (out->tk_str) > 1)
+                                        {
+                                            exit_error (ERROR_VAR3, out);
+                                        }
+                                    else
                                         {
                                             push (ast, out->tk_str, out->tk_id,
                                                   out->tk_line);
@@ -739,8 +783,11 @@ parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list)
                 case DOUBLE_T:
                     r = floating (&out, ast, var_list, DOUBLE_T, "double ");
                     break;
+                case CHAR_T:
+                    r = character (&out, ast, var_list, CHAR_T, "char ");
+                    break;
                 case STRING_T:
-                    r = _m4a1_colt (&out, ast, var_list);
+                    r = character (&out, ast, var_list, STRING_T, "char * ");
                     break;
                 default:
                     if (out->tk_id != ID)
@@ -762,21 +809,19 @@ int
 main (void)
 {
     FILE *f = fopen ("file.neko", "r");
-    // FILE *gcc = fopen("a.c","w");
     TkQueue_t *tk = create ();
     TkQueue_t *ast = create ();
     TkVar_t *var_list = create_var_List ();
 
-    // fprintf(gcc,"#include <stdio.h>\nint main(void) { ");
     if (lex (f, tk))
         {
             puts ("lex error");
-            // return 1;
+            return 1;
         }
     if (parser (tk->out, ast, var_list))
         {
             puts ("\t^ parser error");
-            // return 1;
+            return 1;
         }
     output_var (var_list->out);
 
@@ -787,6 +832,5 @@ main (void)
     fflush (stderr);
     fflush (stdout);
     fclose (f);
-    // fclose(gcc);
     return 0;
 }
