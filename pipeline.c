@@ -3,30 +3,22 @@
 #include <string.h>
 #include <ctype.h>
 
-#define exit_error(err, out) fprintf(stderr, "ToT\nerror '%s', %s in line %d.\n", out->tk_str, err, out->tk_line); \
+#define exit_error(err, out) fprintf(stderr, "ToT\nerror '%s' in line %d, %s.\n", out->tk_str, out->tk_line, err); \
     return 1;
 
 /*
- * Syntax parser error handling
+ * Syntax parser errors
  */
 #define ERROR1 "unexpected expression"
-#define ERROR3 "expected '!' expression"
-#define ERROR4 "expected ':3' expression"
-#define ERROR5 "expected ''' expression"
-
-/*
- * Variables parser error handling
- */
+#define ERROR2 "expected '!' expression"
+#define ERROR3 "expected ':3' expression"
+#define ERROR4 "expected ''' expression"
 #define ERROR_VAR1 "unallocated variable"
 #define ERROR_VAR2 "expected var name"
+#define ERROR_VAR3 "incompatible var type"
+#define ERROR_VAR4 "var already allocated"
 
-/*
- * Types parser error handling
- */
-#define ERROR_M4A1_COLT "expected m4a1_colt value"
-#define ERROR_AK_46 "expected ak_46 value"
-
-#define warning(war, str, line) fprintf(stderr, "-_q\nwarning '%s', %s in line %d.\n", str, war, line);
+#define warning(war, str, line) fprintf(stderr, "-_q\nwarning '%s' in line %d, %s.\n", str, line, war);
 
 #define NTKS (sizeof(look_table)/sizeof(TkTable_t))
 
@@ -44,9 +36,12 @@ enum tokens_enum {
     ID = 1,
     SEMICOLON,
     DEF,
-    LEFT_CURL,
-    RIGHT_CURL,
+    CURL,
     DECORATOR,
+    LEFT_PARENTHESES,
+    RIGHT_PARENTHESES,
+    ASSIGNMENT,
+    QUOTATION,
     TRUE,
     FALSE,
     /* Types */
@@ -64,9 +59,6 @@ enum tokens_enum {
     BOOL_T,
     FLOAT_T,
     DOUBLE_T,
-    /* Operators */
-    ASSIGNMENT_OP,
-    QUOTATION_OP,
     /* Number */
     SUM_OP,
     SUB_OP,
@@ -89,9 +81,10 @@ typedef struct {
 static TkTable_t look_table[] = {
     { SEMICOLON, "!" }, 
     { DEF, "def" },
-    { LEFT_CURL, "\"" }, 
-    { RIGHT_CURL, "\"" }, 
+    { CURL, "\"" }, 
     { DECORATOR, "@" },
+    { ASSIGNMENT, ":3" },
+    { QUOTATION, "\'" },
     { TRUE, "tru" },
     { FALSE, "fake" },
     { VOID_T, "vud" },
@@ -109,8 +102,6 @@ static TkTable_t look_table[] = {
     { BOOL_T, "m46" },
     { FLOAT_T, "i_hate_this" },
     { DOUBLE_T, "idfc" },
-    { ASSIGNMENT_OP, ":3" },
-    { QUOTATION_OP, "\'" },
     { SUM_OP, "+" },
     { SUB_OP, "-" },
     { MULT_OP, "*" },
@@ -178,11 +169,11 @@ _Bool check_var(TkVarNode_t *out, char *var_str)
     return check_var(out->n, var_str);
 }
 
-_Bool check_var_id(TkVarNode_t *out, size_t var_id)
+_Bool check_var_id(TkVarNode_t *out, char *var_str, size_t var_id)
 {
     if (!out) return 0;
-    if (out->var_id == var_id) return 1;
-    return check_var_id(out->n, var_id);
+    if (strcmp(out->var_str, var_str) == 0 && out->var_id == var_id) return 1;
+    return check_var_id(out->n, var_str, var_id);
 }
 
 TkQueue_t *create(void) 
@@ -208,7 +199,7 @@ void push(TkQueue_t *q, char *tk_str, size_t tk_id, size_t tk_l)
 void output(TkNode_t *out) 
 {
   	if (!out) return;
-  	printf("%s",out->tk_str);
+  	printf("%s ",out->tk_str);
   	output(out->n);
 }
 
@@ -231,12 +222,16 @@ _Bool lex(FILE *f, TkQueue_t *tk)
 {
     _Bool quot = 0;
     size_t t = 0, i = t, tk_l = 1;
+    char *breaks=" !@\n\'";
     char c, tk_str_aux[126], tk_str[126];
 
     while((c = getc(f)) != EOF)
 	{ 
+        if (c == '(' || c == ')') continue;
         tk_str_aux[i++] = c;
-		if(c == ' ' || c == '\n' || c == '\'' || c == '!' || c == '@')
+        size_t j;
+        for (j = 0; j < strlen(breaks); ++j) if (c == breaks[j]) break;
+		if (j != strlen(breaks))
 		{ 
             if ((c == ' ' && (!quot)) || (i > 1 && c == '\'') || c == '!' || c == '\n') 
             {
@@ -257,13 +252,13 @@ _Bool lex(FILE *f, TkQueue_t *tk)
 
             if (tk_str[0] != '\0' && tk_str[0] != '\n')
             {
-                push(tk,tk_str,t,tk_l);
+                push(tk, tk_str,t, tk_l);
             }
             if (tk_str[0] != '\'' && c == '\'') 
             {
-                push(tk,look_table[21].tk_str,QUOTATION_OP,tk_l);
+                push(tk, "\'", QUOTATION,tk_l);
             } else if (c == '!') {
-                push(tk,look_table[0].tk_str,SEMICOLON,tk_l);
+                push(tk, "!", SEMICOLON,tk_l);
             }
             
             i = 0;
@@ -275,23 +270,114 @@ _Bool lex(FILE *f, TkQueue_t *tk)
 /* 
  * Parser 
  */
-
-_Bool _ak_46(TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list)
+_Bool floating(TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id, char *str)
 {
     TkNode_t *out = *(lex_out);
 
-    push(ast, "int8_t ", out->tk_id, out->tk_line);
+    push(ast, str, out->tk_id, out->tk_line);
     out = out->n;
 
     if ((out) && out->tk_id == ID)
     {
-        push_var(var_list, out->tk_str, INT8_T);
+        if (check_var(var_list->out, out->tk_str))
+        {
+            exit_error(ERROR_VAR4, out);
+        }
+
+        push_var(var_list, out->tk_str, id);
         push(ast, out->tk_str, out->tk_id, out->tk_line);
         out = out->n;
 
-        if ((out) && out->tk_id == ASSIGNMENT_OP)
+        if ((out) && out->tk_id == ASSIGNMENT)
         {
-            push(ast, "=", ASSIGNMENT_OP, out->tk_line);
+            push(ast, "=", ASSIGNMENT, out->tk_line);
+            out = out->n;
+            
+            if ((out) && out->tk_id == ID) {
+                if (!(is_number(out->tk_str))) {
+                    if (!(check_var(var_list->out, out->tk_str)))
+                    {
+                        exit_error(ERROR_VAR1, out);
+                    } else if (!(check_var_id(var_list->out, out->tk_str, id))) {
+                        exit_error(ERROR_VAR3, out);
+                    }
+                }
+                push(ast, out->tk_str, out->tk_id, out->tk_line);
+                out = out->n;
+
+                if ((out) && out->tk_id == SEMICOLON) 
+                {
+                    push(ast, ";", SEMICOLON, out->tk_line);
+                    *(lex_out) = out;
+                    return 0;
+                } else if ((out) && out->tk_id >= SUM_OP && out->tk_id <= DIV_OP) {
+                    while (out->tk_id != SEMICOLON)
+                    {
+                        if (out->tk_id >= SUM_OP && out->tk_id <= DIV_OP)
+                        {
+                            push(ast, out->tk_str, out->tk_id, out->tk_line);
+                            out = out->n;
+                        } else {
+                            exit_error(ERROR3, out);
+                        }
+                        if ((out) && out->tk_id == ID)
+                        {
+                            if (!(is_number(out->tk_str))) {
+                                if (!(check_var(var_list->out, out->tk_str)))
+                                {
+                                    exit_error(ERROR_VAR1, out);
+                                } else if (!(check_var_id(var_list->out, out->tk_str, id))) {
+                                    exit_error(ERROR_VAR3, out);
+                                }
+                            }
+                            push(ast, out->tk_str, out->tk_id, out->tk_line);
+                            out = out->n;
+                            if (!out) return 1;
+                        } else if (!out) {
+                            return 1;
+                        } else {
+                            exit_error(ERROR1, out);
+                        }
+                    }
+                    push(ast, ";", SEMICOLON, out->tk_line);
+                     *(lex_out) = out;
+                    return 0;
+                } else {
+                    exit_error(ERROR3, out);
+                }
+            } else {
+                exit_error(ERROR_VAR3, out);
+            }
+        } else {
+            exit_error(ERROR4, out);
+        }
+    } else {
+        exit_error(ERROR_VAR2, out);
+    }
+    return 1;
+}
+
+_Bool integer(TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id, char *str)
+{
+    TkNode_t *out = *(lex_out);
+
+    push(ast, str, out->tk_id, out->tk_line);
+    out = out->n;
+
+    if ((out) && out->tk_id == ID)
+    {
+        if (check_var(var_list->out, out->tk_str))
+        {
+            exit_error(ERROR_VAR4, out);
+        }
+
+        push_var(var_list, out->tk_str, id);
+        push(ast, out->tk_str, out->tk_id, out->tk_line);
+        out = out->n;
+
+        if ((out) && out->tk_id == ASSIGNMENT)
+        {
+            push(ast, "=", ASSIGNMENT, out->tk_line);
             out = out->n;
             
             if ((out) && out->tk_id == ID) {
@@ -301,8 +387,8 @@ _Bool _ak_46(TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list)
                     if (!(check_var(var_list->out, out->tk_str)))
                     {
                         exit_error(ERROR_VAR1, out);
-                    } else if (!(check_var_id(var_list->out, INT8_T))) {
-                        exit_error(ERROR_AK_46, out);
+                    } else if (!(check_var_id(var_list->out, out->tk_str, id))) {
+                        exit_error(ERROR_VAR3, out);
                     }
                 }
                 push(ast, out->tk_str, out->tk_id, out->tk_line);
@@ -332,8 +418,8 @@ _Bool _ak_46(TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list)
                                 if (!(check_var(var_list->out, out->tk_str)))
                                 {
                                     exit_error(ERROR_VAR1, out);
-                                } else if (!(check_var_id(var_list->out, INT8_T))) {
-                                    exit_error(ERROR_AK_46, out);
+                                } else if (!(check_var_id(var_list->out, out->tk_str, id))) {
+                                    exit_error(ERROR_VAR3, out);
                                 }
                             }
                             push(ast, out->tk_str, out->tk_id, out->tk_line);
@@ -352,7 +438,7 @@ _Bool _ak_46(TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list)
                     exit_error(ERROR3, out);
                 }
             } else {
-                exit_error(ERROR_AK_46, out);
+                exit_error(ERROR_VAR3, out);
             }
         } else {
             exit_error(ERROR4, out);
@@ -372,32 +458,37 @@ _Bool _m4a1_colt(TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list)
     
     if ((out) && out->tk_id == ID)
     {
+        if (check_var(var_list->out, out->tk_str))
+        {
+            exit_error(ERROR_VAR4, out);
+        }
+
         push_var(var_list, out->tk_str, STRING_T);
         push(ast, out->tk_str, out->tk_id, out->tk_line);
         out = out->n;
 
-        if ((out) && out->tk_id == ASSIGNMENT_OP)
+        if ((out) && out->tk_id == ASSIGNMENT)
         {
-            push(ast, "=", ASSIGNMENT_OP, out->tk_line);
+            push(ast, "=", ASSIGNMENT, out->tk_line);
             out = out->n;
 
-            if ((out) && out->tk_id == QUOTATION_OP)
+            if ((out) && out->tk_id == QUOTATION)
             {
-                push(ast, "\"", QUOTATION_OP, out->tk_line);
+                push(ast, "\"", QUOTATION, out->tk_line);
                 out = out->n;
 
                 if ((out) && out->tk_id == ID)
                 {
-                    while (out->tk_id != QUOTATION_OP)
+                    while (out->tk_id != QUOTATION)
                     {
                         push(ast, out->tk_str, out->tk_id, out->tk_line);
                         out = out->n;
                         if (!out) return 1;
                     }
 
-                    if (out->tk_id == QUOTATION_OP)
+                    if (out->tk_id == QUOTATION)
                     {
-                        push(ast, "\"", QUOTATION_OP, out->tk_line);
+                        push(ast, "\"", QUOTATION, out->tk_line);
                         out = out->n;
 
                         if ((out) && out->tk_id == SEMICOLON)
@@ -409,20 +500,20 @@ _Bool _m4a1_colt(TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list)
                             exit_error(ERROR3, out);
                         }
                     } else {
-                        exit_error(ERROR5, out);
+                        exit_error(ERROR4, out);
                     }
                 } else {
-                    exit_error(ERROR_M4A1_COLT, out);
+                    exit_error(ERROR_VAR3, out);
                 }
             } else if ((out) && out->tk_id == ID) {
                 if (is_number(out->tk_str)) 
                 {
-                    exit_error(ERROR_M4A1_COLT, out);
+                    exit_error(ERROR_VAR3, out);
                 }
                 else if (!check_var(var_list->out, out->tk_str)) {
                     exit_error(ERROR_VAR1, out);
-                } else if (!(check_var_id(var_list->out, out->tk_id))) {
-                    exit_error(ERROR_M4A1_COLT, out);
+                } else if (!(check_var_id(var_list->out, out->tk_str, out->tk_id))) {
+                    exit_error(ERROR_VAR3, out);
                 }
 
                 push(ast, out->tk_str, out->tk_id, out->tk_line);
@@ -437,7 +528,7 @@ _Bool _m4a1_colt(TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list)
                     exit_error(ERROR3, out);
                 }
             } else {
-                exit_error(ERROR_M4A1_COLT, out);
+                exit_error(ERROR_VAR3, out);
             }
         } else {
             exit_error(ERROR4, out);
@@ -457,22 +548,22 @@ _Bool _show_this(TkNode_t **lex_out, TkQueue_t *ast)
     push(ast, "printf(", STRING_T, out->tk_line);
     out = out->n;
 
-    if ((out) && out->tk_id == QUOTATION_OP)
+    if ((out) && out->tk_id == QUOTATION)
     {
-        push(ast, "\"", QUOTATION_OP, out->tk_line);
+        push(ast, "\"", QUOTATION, out->tk_line);
         out = out->n;
 
         if (out)
         {
-            while (out->tk_id != QUOTATION_OP)
+            while (out->tk_id != QUOTATION)
             {
                 push(ast, out->tk_str, out->tk_id, out->tk_line);
                 out = out->n;
                 if (!out) return 1;
             }
-            if (out->tk_id == QUOTATION_OP)
+            if (out->tk_id == QUOTATION)
             {   
-                push(ast, "\")", QUOTATION_OP, out->tk_line);
+                push(ast, "\")", QUOTATION, out->tk_line);
                 out = out->n;
 
                 if ((out) && out->tk_id == SEMICOLON)
@@ -517,25 +608,52 @@ _Bool parser(TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list)
         switch (out->tk_id)
         {
             case INT8_T:
-                r = _ak_46(&out, ast, var_list);
-                if (r) return 1;
+                r = integer(&out, ast, var_list, INT8_T, "int8_t ");
                 break;
+            case INT16_T:
+                r = integer(&out, ast, var_list, INT16_T, "int16_t ");
+                break;
+            case INT32_T:
+                r = integer(&out, ast, var_list, INT32_T, "int32_t ");
+                break;
+            case INT64_T:
+                r = integer(&out, ast, var_list, INT64_T, "int64_t ");
+                break;
+            case UINT8_T:
+                r = integer(&out, ast, var_list, UINT8_T, "uint8_t ");
+                break;
+            case UINT16_T:
+                r = integer(&out, ast, var_list, UINT16_T, "uint16_t ");
+                break;
+            case UINT32_T:
+                r = integer(&out, ast, var_list, UINT32_T, "uint32_t ");
+                break;
+            case UINT64_T:
+                r = integer(&out, ast, var_list, UINT64_T, "uint64_t ");
+                break;
+            case FLOAT_T:
+                r = floating(&out, ast, var_list, FLOAT_T, "float ");
+                break;
+            case DOUBLE_T:
+                r = floating(&out, ast, var_list, DOUBLE_T, "double ");
+                break;    
             case STRING_T:
                 r = _m4a1_colt(&out,ast, var_list); 
-                if (r) return 1;
                 break;
             case DEF:
-                //r = _def(out,ast);
-                //if (r) return 1;
                 break;
             case PRINTF_F:
                 r = _show_this(&out,ast);
-                if (r) return 1;
                 break;
             default:
-                warning("unexpected expression", out->tk_str, out->tk_id);
+                if (out->tk_id != ID)
+                {
+                    exit_error(ERROR1, out);
+                }
+                warning("unexpected expression", out->tk_str, out->tk_line);
                 break;
         }
+        if (r) return 1;
         out = out->n;
     }
     return 0;
@@ -550,9 +668,16 @@ int main(void)
     TkVar_t *var_list = create_var_List();
 
     //fprintf(gcc,"#include <stdio.h>\nint main(void) { ");
-    if (lex(f,tk)) puts("lex error");
-    if (parser(tk->out, ast, var_list)) puts("\t^ parser error");
-    //output_var(var_list->out);
+    if (lex(f,tk)) {
+        puts("lex error");
+        //return 1;
+    }
+    if (parser(tk->out, ast, var_list)) 
+    { 
+        puts("\t^ parser error"); 
+        //return 1;
+    }
+    output_var(var_list->out);
   
     output(tk->out);
     puts("");
