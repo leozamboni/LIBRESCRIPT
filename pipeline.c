@@ -321,8 +321,8 @@ lex (FILE *f, TkQueue_t *tk)
 /*
  * Parser
  */
-_Bool parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list,
-              _Bool inside_conditional);
+TkNode_t *parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list,
+                  _Bool inside_conditional);
 
 _Bool
 conditional (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
@@ -373,10 +373,6 @@ conditional (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
                 {
                   exit_error (ERROR_VAR1, out);
                 }
-              else if (!(check_var_id (var_list->out, out->tk_str, id)))
-                {
-                  exit_error (ERROR_VAR3, out);
-                }
               push (ast, out->tk_str, out->tk_id, out->tk_line);
               out = out->n;
             }
@@ -407,17 +403,16 @@ conditional (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
 
           if ((out) && out->tk_id == RIGHT_KEY)
             {
-              _Bool r = 0;
+              TkNode_t *aux;
 
               push (ast, "{", PARENTHESES, out->tk_line);
+              aux = out;
               out = out->n;
-
-              r = parser (out, ast, var_list, 1);
-              if (r)
+              if (!out)
+                exit_error (ERROR7, aux);
+              out = parser (out, ast, var_list, 1);
+              if (!out)
                 return 1;
-
-              while (out->tk_id != LEFT_KEY)
-                out = out->n;
               *(lex_out) = out;
               return 0;
             }
@@ -929,7 +924,7 @@ character (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
   return 1;
 }
 
-_Bool
+TkNode_t *
 parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list,
         _Bool inside_conditional)
 {
@@ -944,7 +939,7 @@ parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list,
           if (inside_conditional)
             {
               push (ast, "}", PARENTHESES, out->tk_line);
-              return 0;
+              return out;
             }
         case INT8_T:
           r = integer (&out, ast, var_list, INT8_T, "int8_t ");
@@ -999,26 +994,31 @@ parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list,
           aux = out;
           break;
         case IF:
-          r = conditional (&out, ast, var_list, BOOL_T, "if ");
+          r = conditional (&out, ast, var_list, IF, "if");
           aux = out;
           break;
         default:
           if (out->tk_id != ID)
             {
-              exit_error (ERROR1, out);
+              fprintf (stderr, "ToT\nerror '%s' in line %d, %s.\n",
+                       aux->tk_str, aux->tk_line, ERROR1);
+              return NULL;
             }
           warning ("unexpected expression", out->tk_str, out->tk_line);
           break;
         }
       if (r)
-        return 1;
+        return NULL;
       out = out->n;
     }
   if (inside_conditional)
     {
-      exit_error (ERROR7, aux);
+      fprintf (stderr, "ToT\nerror '%s' in line %d, %s.\n", aux->tk_str,
+               aux->tk_line, ERROR7);
+      return NULL;
     }
-  return 0;
+
+  return aux;
 }
 
 int
@@ -1034,7 +1034,7 @@ main (void)
       puts ("lex error");
       return 1;
     }
-  if (parser (tk->out, ast, var_list, 0))
+  if (!parser (tk->out, ast, var_list, 0))
     {
       puts ("\t^ parser error");
       return 1;
