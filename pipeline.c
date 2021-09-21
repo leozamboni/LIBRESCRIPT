@@ -263,7 +263,7 @@ lex (FILE *f, TkQueue_t *tk)
 {
   _Bool quot = 0;
   size_t t = 0, i = t, tk_l = 1;
-  char *breaks = " !@\n\'\"[]";
+  char *breaks = " !@\n\'\"[]+-><=";
   char c, tk_str_aux[126], tk_str[126];
 
   while ((c = getc (f)) != EOF)
@@ -278,7 +278,8 @@ lex (FILE *f, TkQueue_t *tk)
       if (j != strlen (breaks))
         {
           if ((c == ' ' && (!quot)) || (i > 1 && c == '\'') || c == '!'
-              || c == '\n' || c == '\"')
+              || c == '\n' || c == '\"' || c == '+' || c == '-' || c == '>' || c == '<'
+              || c == '=')
             {
               i--;
             }
@@ -303,13 +304,14 @@ lex (FILE *f, TkQueue_t *tk)
             {
               push (tk, "\'", QUOTATION, tk_l);
             }
-          else if (c == '!')
+          else if (c == '!' || c == '\"' || c == '+' || c == '-'
+          || c == '=' || c == '>' || c == '<')
             {
-              push (tk, "!", SEMICOLON, tk_l);
-            }
-          else if (c == '\"')
-            {
-              push (tk, "\"", PARENTHESES, tk_l);
+              char aux_str[1];
+              
+              aux_str[0] = c;
+              aux_str[1] = '\0';
+              push (tk, aux_str, get_tk_id(aux_str), tk_l);
             }
 
           i = 0;
@@ -409,7 +411,9 @@ conditional (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
               aux = out;
               out = out->n;
               if (!out)
-                exit_error (ERROR7, aux);
+                {
+                  exit_error (ERROR7, aux);
+                }
               out = parser (out, ast, var_list, 1);
               if (!out)
                 return 1;
@@ -994,7 +998,7 @@ parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list,
           aux = out;
           break;
         case IF:
-          r = conditional (&out, ast, var_list, IF, "if");
+          r = conditional (&out, ast, var_list, IF, "if ");
           aux = out;
           break;
         default:
@@ -1039,7 +1043,11 @@ main (void)
       puts ("\t^ parser error");
       return 1;
     }
-  output_var (var_list->out);
+  else
+    {
+      puts ("^ ^\nsuccessfully compiled!");
+    }
+  //output_var (var_list->out);
 
   output (tk->out);
   puts ("");

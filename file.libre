@@ -1,5 +1,6 @@
   m46 bool :3 tru! 
   m46 bool2 :3 tru!
 
-se "bool > 2" [
-
+se "bool+2" [
+  m46 bool3 :3 tru!
+]
