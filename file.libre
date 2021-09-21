@@ -1,0 +1,9 @@
+  m46 bool :3 tru! 
+  m46 bool2 :3 tru!
+
+se "bool > bool2" [ 
+  se "1 + 2" [
+    
+  ]
+
+]
