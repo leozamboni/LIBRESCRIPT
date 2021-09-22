@@ -423,6 +423,7 @@ _conditional (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
               if (!out)
                 return 1;
 
+              aux = out;
               out = out->n;
               if ((out) && out->tk_id == ELSEIF)
                 {
@@ -513,9 +514,7 @@ _conditional (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
 
                               if ((out) && out->tk_id == RIGHT_KEY)
                                 {
-                                  TkNode_t *aux;
-
-                                  push (ast, "{", PARENTHESES, out->tk_line);
+                                  push (ast, "{", RIGHT_KEY, out->tk_line);
                                   aux = out;
                                   out = out->n;
                                   if (!out)
@@ -525,9 +524,6 @@ _conditional (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
                                   out = parser (out, ast, var_list, 1);
                                   if (!out)
                                     return 1;
-
-                                  //*(lex_out) = out;
-                                  //return 0;
                                 }
                             }
                         }
@@ -537,6 +533,30 @@ _conditional (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
                         }
                       aux = out;
                       out = out->n;
+                    }
+                }
+              if ((out) && out->tk_id == ELSE)
+                {
+                  push (ast, "else", out->tk_id, out->tk_line);
+                  out = out->n;
+
+                  if ((out) && out->tk_id == RIGHT_KEY)
+                    {
+                      push (ast, "{", RIGHT_KEY, out->tk_line);
+                      aux = out;
+                      out = out->n;
+                      if (!out)
+                        {
+                          exit_error (ERROR7, aux);
+                        }
+                      out = parser (out, ast, var_list, 1);
+                      if (!out)
+                        return 1;
+                      aux = out;
+                    }
+                  else
+                    {
+                      exit_error (ERROR6, out);
                     }
                 }
               *(lex_out) = aux;
