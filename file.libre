@@ -1,8 +1,10 @@
-  m46 bool :3 tru! 
-  m46 bool2 :3 tru!
 
+  m46 bool :3 tru!
 se "bool+2" [
-  m46 bool3 :3 tru!
+] mas,se "1+2" [
+  m46 bool5 :3 tru!
 ] 
-
- m46 boo2l2 :3 tru!
+mas,se "1+2" [
+  m46 bffool5 :3 tru!
+] 
+ m46 bssool :3 tru!

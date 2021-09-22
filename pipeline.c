@@ -18,6 +18,7 @@
 #define ERROR5 "expected '\"' expression"
 #define ERROR6 "expected '[' expression"
 #define ERROR7 "expected ']' expressiondd"
+#define ERROR8 "not possible strings comparison"
 #define ERROR_VAR1 "unallocated variable"
 #define ERROR_VAR2 "expected var name"
 #define ERROR_VAR3 "incompatible var type"
@@ -324,7 +325,7 @@ lex (FILE *f, TkQueue_t *tk)
  * Parser
  */
 TkNode_t *parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list,
-                  _Bool inside_conditional);
+                  _Bool if_cond);
 
 _Bool
 _conditional (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
@@ -375,6 +376,10 @@ _conditional (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
                 {
                   exit_error (ERROR_VAR1, out);
                 }
+              else if (check_var_id (var_list->out, out->tk_str, STRING_T))
+                {
+                  exit_error (ERROR8, out);
+                }
               push (ast, out->tk_str, out->tk_id, out->tk_line);
               out = out->n;
             }
@@ -417,7 +422,124 @@ _conditional (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
               out = parser (out, ast, var_list, 1);
               if (!out)
                 return 1;
-              *(lex_out) = out;
+
+              out = out->n;
+              if ((out) && out->tk_id == ELSEIF)
+                {
+                  while (out->tk_id == ELSEIF)
+                    {
+                      push (ast, "else if", out->tk_id, out->tk_line);
+                      out = out->n;
+
+                      if ((out) && out->tk_id == PARENTHESES)
+                        {
+                          push (ast, "(", PARENTHESES, out->tk_line);
+                          out = out->n;
+
+                          while (1)
+                            {
+                              if ((out) && is_number (out->tk_str))
+                                {
+                                  push (ast, out->tk_str, out->tk_id,
+                                        out->tk_line);
+                                  out = out->n;
+                                }
+                              else if ((out) && out->tk_id == ID)
+                                {
+                                  if (strchr (out->tk_str, '.'))
+                                    {
+                                      _Bool dot = 0;
+                                      size_t i;
+
+                                      for (i = 0; i < strlen (out->tk_str);
+                                           ++i)
+                                        {
+                                          if (dot && out->tk_str[i] == '.')
+                                            break;
+                                          if (out->tk_str[i] == '.')
+                                            {
+                                              dot = 1;
+                                              continue;
+                                            }
+                                          if (!(isdigit (out->tk_str[i])))
+                                            break;
+                                        }
+                                      if (i != strlen (out->tk_str))
+                                        {
+                                          exit_error (ERROR_VAR3, out);
+                                        }
+                                    }
+                                  else if (!(check_var (var_list->out,
+                                                        out->tk_str)))
+                                    {
+                                      exit_error (ERROR_VAR1, out);
+                                    }
+                                  else if (check_var_id (var_list->out,
+                                                         out->tk_str,
+                                                         STRING_T))
+                                    {
+                                      exit_error (ERROR8, out);
+                                    }
+                                  push (ast, out->tk_str, out->tk_id,
+                                        out->tk_line);
+                                  out = out->n;
+                                }
+                              else
+                                {
+                                  exit_error (ERROR1, out);
+                                }
+
+                              if ((out) && out->tk_id >= SUM_OP
+                                  && out->tk_id <= EQUAL_OP)
+                                {
+                                  push (ast, out->tk_str, out->tk_id,
+                                        out->tk_line);
+                                  out = out->n;
+                                }
+                              else if ((out) && out->tk_id == PARENTHESES)
+                                {
+                                  break;
+                                }
+                              else
+                                {
+                                  exit_error (ERROR1, out);
+                                }
+                            }
+
+                          if ((out) && out->tk_id == PARENTHESES)
+                            {
+                              push (ast, ")", PARENTHESES, out->tk_line);
+                              out = out->n;
+
+                              if ((out) && out->tk_id == RIGHT_KEY)
+                                {
+                                  TkNode_t *aux;
+
+                                  push (ast, "{", PARENTHESES, out->tk_line);
+                                  aux = out;
+                                  out = out->n;
+                                  if (!out)
+                                    {
+                                      exit_error (ERROR7, aux);
+                                    }
+                                  out = parser (out, ast, var_list, 1);
+                                  if (!out)
+                                    return 1;
+
+                                  //*(lex_out) = out;
+                                  //return 0;
+                                }
+                            }
+                        }
+                      else
+                        {
+                          exit_error (ERROR5, out);
+                        }
+                      aux = out;
+                      out = out->n;
+                    }
+                }
+              *(lex_out) = aux;
               return 0;
             }
           else
@@ -929,8 +1051,7 @@ _character (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
 }
 
 TkNode_t *
-parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list,
-        _Bool inside_conditional)
+parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list, _Bool if_cond)
 {
   _Bool r = 0;
   TkNode_t *aux;
@@ -940,7 +1061,7 @@ parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list,
       switch (out->tk_id)
         {
         case LEFT_KEY:
-          if (inside_conditional)
+          if (if_cond)
             {
               push (ast, "}", PARENTHESES, out->tk_line);
               return out;
@@ -1015,7 +1136,7 @@ parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list,
         return NULL;
       out = out->n;
     }
-  if (inside_conditional)
+  if (if_cond)
     {
       fprintf (stderr, "ToT\nerror '%s' in line %d, %s.\n", aux->tk_str,
                aux->tk_line, ERROR7);
@@ -1041,7 +1162,7 @@ main (void)
   if (!parser (tk->out, ast, var_list, 0))
     {
       puts ("\t^ parser error");
-      return 1;
+      // return 1;
     }
   else
     {
