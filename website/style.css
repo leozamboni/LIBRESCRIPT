@@ -1,0 +1,37 @@
+* {
+  font-family: sans-serif;
+  margin: 0;
+}
+
+hr, main {
+  margin: 0 10% 10px 10%;
+}
+
+main .install {
+  text-align: center;
+}
+
+header {
+  text-align: center;
+}
+
+header div {
+  display: flex;
+  align-items: center;
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%);
+}
+
+header img {
+  height: 100px;
+}
+
+header ul {
+  padding: 110px 10% 10px 10%;
+}
+
+header ul li {
+  margin: .7%;
+  display: inline;
+}

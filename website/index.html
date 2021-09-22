@@ -1,89 +1,39 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LibreScript</title>
-    <style>
-        * {
-            text-align: center;
-            color: white;
-            font-family: monospace;
-        }
-
-        html {            
-            height: 100vh;
-        }
-
-        body {
-            background: rgb(168,146,21);
-            background: radial-gradient(circle, rgba(168,146,21,1) 0%, rgba(17,17,17,1) 75%);
-            background-position: center;
-            background-repeat: no-repeat;
-            background-size: cover;
-        }   
-
-        .field {
-            padding: 5px;
-            width: 50%;
-            text-align: center;
-            border: solid 1px;
-            border-radius: 4px 4px 4px 4px;
-            position: absolute;
-            left: 50%;
-            transform: translate(-50%);
-        }
-
-        .caption {
-            margin-top: -20px;
-            color: yellow;
-        }
-
-        .neko-girl {
-            width: 150px;
-        }
-
-        a {
-            color: yellow;
-        }
-
-        a:hover {
-            color: rgb(255, 255, 166);
-        }
-
-        a:active {
-            color: blueviolet;
-        }
-
-        .download {
-            margin-top: 100px;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+  <title>LibreScript</title>
 </head>
 <body>
-    <main>
-        <img class="neko-girl" src="libre-girl.png" alt="">
-        <h1>LibreScript</h1>
-        <p class="caption">A decentralized scripting language</p>
-        <div class="field">
-            <p>
-                <a href="">Get Started</a> |
-                <a href="">Documentation</a> |
-                <a href="">Tutorials</a> |
-                <a href="">Packages</a> | 
-                <a href="https://github.com/leozamboni/LibreScript">Source</a> | 
-                <a href="">News</a> |
-                <a href="">License</a> | 
-                <a href="">Report</a> |
-                <a href="">Media</a> 
-            </p>
-        </div>
-        <div class="download">
-            <h2 style="background-color:rgb(2, 91, 255); display:inline-block;">Install LibreScript 0.0.1</h2>
-            <h3>GNU/Linux</h3>
-            <h3>Windows</h3>
-            <p>Install <a href="https://sourceforge.net/projects/mingw/">GCC</a>.</p>
-        </div>
-    </main>
+  <header>
+    <div>
+      <img src="libre-girl.png" alt="">
+      <h1>LibreScript</h1>
+    </div>
+    <ul>
+      <li><a href="">Home</a></li>
+      <li><a href="">Learn</a></li>
+      <li><a href="">Documentation</a></li>
+      <li><a href="">Packages</a></li>
+      <li><a href="https://github.com/leozamboni/LibreScript">Source</a></li>
+      <li><a href="">News</a></li>
+      <li><a href="">Report</a></li>
+      <li><a href="">License</a></li>
+      <li><a href="">Links</a></li>
+    </ul>
+  </header>
+  <hr>
+  <main>
+    <div>
+      <p>LibreScript is a free and open source compiled scripting language with C programming language libraries support.</p>
+    </div>
+    <div class="install">
+      <h2>Install LibreScript 0.0.1</h2>
+      <h3>GNU/Linux</h3>
+      <h3>Windows</h3>
+    </div>
+  </main>
 </body>
 </html>

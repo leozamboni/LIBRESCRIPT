@@ -1,3 +1,8 @@
+uint16 var :3 12;
+string name :3 '1';
 
-se "1+2" [] mas,se "1+1" [] senao [m46 bool :3 tru!] senao []
-m46 bssool :3 tru!
+if "var > 2" [
+
+] elif "2 > var" [
+
+] else []

@@ -12,13 +12,13 @@
   return 1;
 
 #define ERROR1 "unexpected expression"
-#define ERROR2 "expected '!' expression"
+#define ERROR2 "expected ';' expression"
 #define ERROR3 "expected ':3' expression"
 #define ERROR4 "expected ''' expression"
 #define ERROR5 "expected '\"' expression"
 #define ERROR6 "expected '[' expression"
 #define ERROR7 "expected ']' expressiondd"
-#define ERROR8 "not possible strings comparison"
+#define ERROR8 "strings comparison"
 #define ERROR_VAR1 "unallocated variable"
 #define ERROR_VAR2 "expected var name"
 #define ERROR_VAR3 "incompatible var type"
@@ -43,6 +43,8 @@ is_number (char *s)
 enum tokens_enum
 {
   ID = 1,
+  INCLUDE,
+  END,
   SEMICOLON,
   DEF,
   DECORATOR,
@@ -81,8 +83,6 @@ enum tokens_enum
   GREATER_OP,
   LESS_OP,
   EQUAL_OP,
-  /* Functions */
-  PRINTF_F,
 };
 
 typedef struct
@@ -92,43 +92,19 @@ typedef struct
 } TkTable_t;
 
 static TkTable_t look_table[] = {
-  { SEMICOLON, "!" },
-  { DEF, "def" },
-  { DECORATOR, "@" },
-  { ASSIGNMENT, ":3" },
-  { QUOTATION, "\'" },
-  { PARENTHESES, "\"" },
-  { RIGHT_KEY, "[" },
-  { LEFT_KEY, "]" },
-  { IF, "se" },
-  { ELSE, "senao" },
-  { ELSEIF, "mas,se" },
-  { _TRUE, "tru" },
-  { _FALSE, "fake" },
-  { VOID_T, "vud" },
-  { INT8_T, "ak_46" },
-  { INT16_T, "ak_47" },
-  { INT32_T, "ak_47s" },
-  { INT64_T, "rpk" },
-  { UINT8_T, "UwU_ak_46" },
-  { UINT16_T, "UwU_ak_47" },
-  { UINT16_T, "i_love_int" },
-  { UINT32_T, "UwU_ak_47s" },
-  { UINT64_T, "UwU_rpk" },
-  { CHAR_T, "m4" },
-  { STRING_T, "m4a1_colt" },
-  { BOOL_T, "m46" },
-  { FLOAT_T, "i_hate_this" },
-  { DOUBLE_T, "idfc" },
-  { SUM_OP, "+" },
-  { SUB_OP, "-" },
-  { MULT_OP, "*" },
-  { DIV_OP, "/" },
-  { OR_OP, "or" },
-  { GREATER_OP, ">" },
-  { LESS_OP, "<" },
-  { EQUAL_OP, "=" },
-  { PRINTF_F, "show_this" },
+  { INCLUDE, "@include" }, 
+  { SEMICOLON, ";" },     { DEF, "def" },         { DECORATOR, "@" },
+  { ASSIGNMENT, ":3" },   { QUOTATION, "\'" },    { PARENTHESES, "\"" },
+  { RIGHT_KEY, "[" },     { LEFT_KEY, "]" },      { IF, "if" },
+  { ELSE, "else" },       { ELSEIF, "elif" },     { _TRUE, "true" },
+  { _FALSE, "false" },    { VOID_T, "void" },     { INT8_T, "int8" },
+  { INT16_T, "int16" },   { INT32_T, "int32" },   { INT64_T, "int64" },
+  { UINT8_T, "uint8" },   { UINT16_T, "uint16" }, { UINT16_T, "size" },
+  { UINT32_T, "uint32" }, { UINT64_T, "uint64" }, { CHAR_T, "char" },
+  { STRING_T, "string" }, { BOOL_T, "bool" },     { FLOAT_T, "float" },
+  { DOUBLE_T, "double" }, { SUM_OP, "+" },        { SUB_OP, "-" },
+  { MULT_OP, "*" },       { DIV_OP, "/" },        { OR_OP, "or" },
+  { GREATER_OP, ">" },    { LESS_OP, "<" },       { EQUAL_OP, "=" },
 };
 
 typedef struct TkVarNode
@@ -264,7 +240,7 @@ lex (FILE *f, TkQueue_t *tk)
 {
   _Bool quot = 0;
   size_t t = 0, i = t, tk_l = 1;
-  char *breaks = " !@\n\'\"[]+-><=";
+  char *breaks = " ;@\n\'\"[]+-><=";
   char c, tk_str_aux[126], tk_str[126];
 
   while ((c = getc (f)) != EOF)
@@ -278,7 +254,7 @@ lex (FILE *f, TkQueue_t *tk)
           break;
       if (j != strlen (breaks))
         {
-          if ((c == ' ' && (!quot)) || (i > 1 && c == '\'') || c == '!'
+          if ((c == ' ' && (!quot)) || (i > 1 && c == '\'') || c == ';'
               || c == '\n' || c == '\"' || c == '+' || c == '-' || c == '>'
               || c == '<' || c == '=')
             {
@@ -305,7 +281,7 @@ lex (FILE *f, TkQueue_t *tk)
             {
               push (tk, "\'", QUOTATION, tk_l);
             }
-          else if (c == '!' || c == '\"' || c == '+' || c == '-' || c == '='
+          else if (c == ';' || c == '\"' || c == '+' || c == '-' || c == '='
                    || c == '>' || c == '<')
             {
               char aux_str[1];
@@ -326,6 +302,16 @@ lex (FILE *f, TkQueue_t *tk)
  */
 TkNode_t *parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list,
                   _Bool if_cond);
+
+_Bool
+_include (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
+          char *str)
+{
+  TkNode_t *out = *(lex_out);
+
+  push (ast, str, out->tk_id, out->tk_line);
+  out = out->n;
+}
 
 _Bool
 _conditional (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
@@ -1087,59 +1073,59 @@ parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list, _Bool if_cond)
               return out;
             }
         case INT8_T:
-          r = _integer (&out, ast, var_list, INT8_T, "int8_t ");
+          r = _integer (&out, ast, var_list, INT8_T, "int8_t \0");
           aux = out;
           break;
         case INT16_T:
-          r = _integer (&out, ast, var_list, INT16_T, "int16_t ");
+          r = _integer (&out, ast, var_list, INT16_T, "int16_t  \0");
           aux = out;
           break;
         case INT32_T:
-          r = _integer (&out, ast, var_list, INT32_T, "int32_t ");
+          r = _integer (&out, ast, var_list, INT32_T, "int32_t \0");
           aux = out;
           break;
         case INT64_T:
-          r = _integer (&out, ast, var_list, INT64_T, "int64_t ");
+          r = _integer (&out, ast, var_list, INT64_T, "int64_t \0");
           aux = out;
           break;
         case UINT8_T:
-          r = _integer (&out, ast, var_list, UINT8_T, "uint8_t ");
+          r = _integer (&out, ast, var_list, UINT8_T, "uint8_t \0");
           aux = out;
           break;
         case UINT16_T:
-          r = _integer (&out, ast, var_list, UINT16_T, "uint16_t ");
+          r = _integer (&out, ast, var_list, UINT16_T, "uint16_t \0");
           aux = out;
           break;
         case UINT32_T:
-          r = _integer (&out, ast, var_list, UINT32_T, "uint32_t ");
+          r = _integer (&out, ast, var_list, UINT32_T, "uint32_t \0");
           aux = out;
           break;
         case UINT64_T:
-          r = _integer (&out, ast, var_list, UINT64_T, "uint64_t ");
+          r = _integer (&out, ast, var_list, UINT64_T, "uint64_t \0");
           aux = out;
           break;
         case FLOAT_T:
-          r = _floating (&out, ast, var_list, FLOAT_T, "float ");
+          r = _floating (&out, ast, var_list, FLOAT_T, "float \0");
           aux = out;
           break;
         case DOUBLE_T:
-          r = _floating (&out, ast, var_list, DOUBLE_T, "double ");
+          r = _floating (&out, ast, var_list, DOUBLE_T, "double \0");
           aux = out;
           break;
         case CHAR_T:
-          r = _character (&out, ast, var_list, CHAR_T, "char ");
+          r = _character (&out, ast, var_list, CHAR_T, "char \0");
           aux = out;
           break;
         case STRING_T:
-          r = _character (&out, ast, var_list, STRING_T, "char * ");
+          r = _character (&out, ast, var_list, STRING_T, "char * \0");
           aux = out;
           break;
         case BOOL_T:
-          r = _boolean (&out, ast, var_list, BOOL_T, "_Bool ");
+          r = _boolean (&out, ast, var_list, BOOL_T, "_Bool \0");
           aux = out;
           break;
         case IF:
-          r = _conditional (&out, ast, var_list, IF, "if ");
+          r = _conditional (&out, ast, var_list, IF, "if \0");
           aux = out;
           break;
         default:
