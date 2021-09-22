@@ -537,7 +537,7 @@ _conditional (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
                 }
               if ((out) && out->tk_id == ELSE)
                 {
-                  push (ast, "else", out->tk_id, out->tk_line);
+                  push (ast, "else ", out->tk_id, out->tk_line);
                   out = out->n;
 
                   if ((out) && out->tk_id == RIGHT_KEY)
