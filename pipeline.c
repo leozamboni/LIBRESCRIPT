@@ -20,6 +20,7 @@
 #define ERROR7 "expected ']' expression"
 #define ERROR8 "strings comparison"
 #define ERROR9 "expected '@end' expression"
+#define ERROR10 "literal operator can't be nested"
 #define ERROR_VAR1 "unallocated variable"
 #define ERROR_VAR2 "expected var name"
 #define ERROR_VAR3 "incompatible var type"
@@ -45,7 +46,8 @@ enum tokens_enum
 {
   ID = 1,
   INCLUDE,
-  BEGIN,
+  SHELL,
+  CLANG,
   END,
   SEMICOLON,
   DEF,
@@ -93,19 +95,19 @@ typedef struct
 } TkTable_t;
 
 static TkTable_t look_table[] = {
-  { BEGIN, "@begin" },    { END, "@end" },       { INCLUDE, "import" },
-  { SEMICOLON, ";" },     { DEF, "def" },        { ASSIGNMENT, ":3" },
-  { QUOTATION, "\'" },    { PARENTHESES, "\"" }, { RIGHT_KEY, "[" },
-  { LEFT_KEY, "]" },      { IF, "if" },          { ELSE, "else" },
-  { ELSEIF, "elif" },     { _TRUE, "true" },     { _FALSE, "false" },
-  { VOID_T, "void" },     { INT8_T, "int8" },    { INT16_T, "int16" },
-  { INT32_T, "int32" },   { INT64_T, "int64" },  { UINT8_T, "uint8" },
-  { UINT16_T, "uint16" }, { UINT16_T, "size" },  { UINT32_T, "uint32" },
-  { UINT64_T, "uint64" }, { CHAR_T, "char" },    { STRING_T, "string" },
-  { BOOL_T, "bool" },     { FLOAT_T, "float" },  { DOUBLE_T, "double" },
-  { SUM_OP, "+" },        { SUB_OP, "-" },       { MULT_OP, "*" },
-  { DIV_OP, "/" },        { OR_OP, "or" },       { GREATER_OP, ">" },
-  { LESS_OP, "<" },       { EQUAL_OP, "=" },
+  { SHELL, "@shell" },    { CLANG, "@clang" },    { END, "@end" },
+  { INCLUDE, "import" },  { SEMICOLON, ";" },     { DEF, "def" },
+  { ASSIGNMENT, ":3" },   { QUOTATION, "\'" },    { PARENTHESES, "\"" },
+  { RIGHT_KEY, "[" },     { LEFT_KEY, "]" },      { IF, "if" },
+  { ELSE, "else" },       { ELSEIF, "elif" },     { _TRUE, "true" },
+  { _FALSE, "false" },    { VOID_T, "void" },     { INT8_T, "int8" },
+  { INT16_T, "int16" },   { INT32_T, "int32" },   { INT64_T, "int64" },
+  { UINT8_T, "uint8" },   { UINT16_T, "uint16" }, { UINT16_T, "size" },
+  { UINT32_T, "uint32" }, { UINT64_T, "uint64" }, { CHAR_T, "char" },
+  { STRING_T, "string" }, { BOOL_T, "bool" },     { FLOAT_T, "float" },
+  { DOUBLE_T, "double" }, { SUM_OP, "+" },        { SUB_OP, "-" },
+  { MULT_OP, "*" },       { DIV_OP, "/" },        { OR_OP, "or" },
+  { GREATER_OP, ">" },    { LESS_OP, "<" },       { EQUAL_OP, "=" },
 };
 
 typedef struct TkVarNode
@@ -240,7 +242,7 @@ _Bool
 lex (FILE *f, TkQueue_t *tk)
 {
   _Bool quot = 0;
-  _Bool begin = 0;
+  _Bool literal = 0;
   size_t t = 0;
   size_t i = 0;
   size_t tk_l = 1;
@@ -251,7 +253,7 @@ lex (FILE *f, TkQueue_t *tk)
 
   while ((c = getc (f)) != EOF)
     {
-      if ((c == '(' && !begin) || (c == ')' && !begin))
+      if ((c == '(' && !literal) || (c == ')' && !literal))
         continue;
       tk_str_aux[i++] = c;
       size_t j;
@@ -277,19 +279,20 @@ lex (FILE *f, TkQueue_t *tk)
 
           tk_str_aux[i] = '\0';
 
-          if (strcmp (tk_str_aux, "@begin") == 0)
+          if ((strcmp (tk_str_aux, "@clang") == 0)
+              || (strcmp (tk_str_aux, "@shell") == 0))
             {
-              begin = 1;
+              literal = 1;
             }
           else if (strcmp (tk_str_aux, "@end") == 0)
             {
-              begin = 0;
+              literal = 0;
             }
 
           strcpy (tk_str, tk_str_aux);
           t = get_tk_id (tk_str);
 
-          if (begin)
+          if (literal)
             {
               push (tk, tk_str, t, tk_l);
             }
@@ -324,7 +327,7 @@ TkNode_t *parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list,
                   _Bool if_cond);
 
 _Bool
-_begin (TkNode_t **lex_out, TkQueue_t *ast)
+_literal (TkNode_t **lex_out, TkQueue_t *ast, size_t id)
 {
   TkNode_t *out = *(lex_out);
   TkNode_t *aux;
@@ -332,15 +335,24 @@ _begin (TkNode_t **lex_out, TkQueue_t *ast)
 
   while (out->tk_id != END)
     {
-      push (ast, out->tk_str, out->tk_id, out->tk_line);
+      if ((id == CLANG && out->tk_id == SHELL)
+          || (id == SHELL && out->tk_id == CLANG))
+        {
+          exit_error (ERROR10, out);
+        }
+
+      if (id == CLANG)
+        {
+          push (ast, out->tk_str, out->tk_id, out->tk_line);
+        } // TODO: make if id == SHELL
       aux = out;
       out = out->n;
       if (!out)
-        {
-          exit_error (ERROR9, aux);
-        }
+        break;
     }
 
+  if (!out)
+    out = aux;
   *(lex_out) = out;
   return 0;
 }
@@ -1129,8 +1141,12 @@ parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list, _Bool if_cond)
           r = _import (&out, ast);
           aux = out;
           break;
-        case BEGIN:
-          r = _begin (&out, ast);
+        case SHELL:
+          r = _literal (&out, ast, SHELL);
+          aux = out;
+          break;
+        case CLANG:
+          r = _literal (&out, ast, CLANG);
           aux = out;
           break;
         case LEFT_KEY:

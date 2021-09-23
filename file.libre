@@ -1,16 +1,11 @@
 import stdio.h;
 
-@begin
+string hello :3 'Hello, world!';
 
-printf("asdasd");
-return 1;
+@clang
+printf("%s", hello);
 @end
 
-uint16 var :3 12;
-string name :3 '1';
-
-if "var > 2" [
-
-] elif "2 > var" [
-
-] else []
+@shell :teste 
+mkdir teste
+@end

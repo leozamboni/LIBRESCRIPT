@@ -11,6 +11,11 @@ main .install {
   text-align: center;
 }
 
+main div img {
+  height: 200px;
+  float: left;
+}
+
 header {
   text-align: center;
 }
