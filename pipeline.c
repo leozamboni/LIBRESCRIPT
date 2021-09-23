@@ -44,10 +44,10 @@ enum tokens_enum
 {
   ID = 1,
   INCLUDE,
+  START,
   END,
   SEMICOLON,
   DEF,
-  DECORATOR,
   PARENTHESES,
   RIGHT_KEY,
   LEFT_KEY,
@@ -92,19 +92,19 @@ typedef struct
 } TkTable_t;
 
 static TkTable_t look_table[] = {
-  { INCLUDE, "@include" }, 
-  { SEMICOLON, ";" },     { DEF, "def" },         { DECORATOR, "@" },
-  { ASSIGNMENT, ":3" },   { QUOTATION, "\'" },    { PARENTHESES, "\"" },
-  { RIGHT_KEY, "[" },     { LEFT_KEY, "]" },      { IF, "if" },
-  { ELSE, "else" },       { ELSEIF, "elif" },     { _TRUE, "true" },
-  { _FALSE, "false" },    { VOID_T, "void" },     { INT8_T, "int8" },
-  { INT16_T, "int16" },   { INT32_T, "int32" },   { INT64_T, "int64" },
-  { UINT8_T, "uint8" },   { UINT16_T, "uint16" }, { UINT16_T, "size" },
-  { UINT32_T, "uint32" }, { UINT64_T, "uint64" }, { CHAR_T, "char" },
-  { STRING_T, "string" }, { BOOL_T, "bool" },     { FLOAT_T, "float" },
-  { DOUBLE_T, "double" }, { SUM_OP, "+" },        { SUB_OP, "-" },
-  { MULT_OP, "*" },       { DIV_OP, "/" },        { OR_OP, "or" },
-  { GREATER_OP, ">" },    { LESS_OP, "<" },       { EQUAL_OP, "=" },
+  { START, "@begin" },    { END, "@end" },       { INCLUDE, "import" },
+  { SEMICOLON, ";" },     { DEF, "def" },        { ASSIGNMENT, ":3" },
+  { QUOTATION, "\'" },    { PARENTHESES, "\"" }, { RIGHT_KEY, "[" },
+  { LEFT_KEY, "]" },      { IF, "if" },          { ELSE, "else" },
+  { ELSEIF, "elif" },     { _TRUE, "true" },     { _FALSE, "false" },
+  { VOID_T, "void" },     { INT8_T, "int8" },    { INT16_T, "int16" },
+  { INT32_T, "int32" },   { INT64_T, "int64" },  { UINT8_T, "uint8" },
+  { UINT16_T, "uint16" }, { UINT16_T, "size" },  { UINT32_T, "uint32" },
+  { UINT64_T, "uint64" }, { CHAR_T, "char" },    { STRING_T, "string" },
+  { BOOL_T, "bool" },     { FLOAT_T, "float" },  { DOUBLE_T, "double" },
+  { SUM_OP, "+" },        { SUB_OP, "-" },       { MULT_OP, "*" },
+  { DIV_OP, "/" },        { OR_OP, "or" },       { GREATER_OP, ">" },
+  { LESS_OP, "<" },       { EQUAL_OP, "=" },
 };
 
 typedef struct TkVarNode
@@ -215,7 +215,7 @@ output (TkNode_t *out)
 {
   if (!out)
     return;
-  printf ("%s ", out->tk_str);
+  printf ("%s", out->tk_str);
   output (out->n);
 }
 
@@ -239,9 +239,14 @@ _Bool
 lex (FILE *f, TkQueue_t *tk)
 {
   _Bool quot = 0;
-  size_t t = 0, i = t, tk_l = 1;
-  char *breaks = " ;@\n\'\"[]+-><=";
-  char c, tk_str_aux[126], tk_str[126];
+  _Bool begin = 0;
+  size_t t = 0;
+  size_t i = 0; 
+  size_t tk_l = 1;
+  char *breaks = " ;\n\'\"[]+-><=";
+  char c; 
+  char tk_str_aux[126]; 
+  char tk_str[126];
 
   while ((c = getc (f)) != EOF)
     {
@@ -268,6 +273,11 @@ lex (FILE *f, TkQueue_t *tk)
             {
               tk_l++;
             }
+
+          if (strcmp(tk_str_aux, "@begin") == 0) {
+            begin = 1;
+          }
+
 
           tk_str_aux[i] = '\0';
           strcpy (tk_str, tk_str_aux);
@@ -304,13 +314,30 @@ TkNode_t *parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list,
                   _Bool if_cond);
 
 _Bool
-_include (TkNode_t **lex_out, TkQueue_t *ast, TkVar_t *var_list, size_t id,
-          char *str)
+_import (TkNode_t **lex_out, TkQueue_t *ast)
 {
   TkNode_t *out = *(lex_out);
-
-  push (ast, str, out->tk_id, out->tk_line);
+  push (ast, "#include <", out->tk_id, out->tk_line);
   out = out->n;
+
+  if ((out) && out->tk_id == ID)
+    {
+      push (ast, out->tk_str, out->tk_id, out->tk_line);
+    }
+  else
+    {
+      exit_error (ERROR1, out);
+    }
+  push (ast, ".h>\n", out->tk_id, out->tk_line);
+
+  out = out->n;
+  if (!(out) || out->tk_id != SEMICOLON)
+    {
+      exit_error (ERROR2, out);
+    }
+
+  *(lex_out) = out;
+  return 0;
 }
 
 _Bool
@@ -1066,6 +1093,10 @@ parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list, _Bool if_cond)
     {
       switch (out->tk_id)
         {
+        case INCLUDE:
+          r = _import (&out, ast);
+          aux = out;
+          break;
         case LEFT_KEY:
           if (if_cond)
             {

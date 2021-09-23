@@ -1,3 +1,5 @@
+import stdio;
+
 uint16 var :3 12;
 string name :3 '1';
 
