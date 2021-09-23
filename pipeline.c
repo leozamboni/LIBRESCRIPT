@@ -17,8 +17,9 @@
 #define ERROR4 "expected ''' expression"
 #define ERROR5 "expected '\"' expression"
 #define ERROR6 "expected '[' expression"
-#define ERROR7 "expected ']' expressiondd"
+#define ERROR7 "expected ']' expression"
 #define ERROR8 "strings comparison"
+#define ERROR9 "expected '@end' expression"
 #define ERROR_VAR1 "unallocated variable"
 #define ERROR_VAR2 "expected var name"
 #define ERROR_VAR3 "incompatible var type"
@@ -44,7 +45,7 @@ enum tokens_enum
 {
   ID = 1,
   INCLUDE,
-  START,
+  BEGIN,
   END,
   SEMICOLON,
   DEF,
@@ -92,7 +93,7 @@ typedef struct
 } TkTable_t;
 
 static TkTable_t look_table[] = {
-  { START, "@begin" },    { END, "@end" },       { INCLUDE, "import" },
+  { BEGIN, "@begin" },    { END, "@end" },       { INCLUDE, "import" },
   { SEMICOLON, ";" },     { DEF, "def" },        { ASSIGNMENT, ":3" },
   { QUOTATION, "\'" },    { PARENTHESES, "\"" }, { RIGHT_KEY, "[" },
   { LEFT_KEY, "]" },      { IF, "if" },          { ELSE, "else" },
@@ -215,7 +216,7 @@ output (TkNode_t *out)
 {
   if (!out)
     return;
-  printf ("%s", out->tk_str);
+  printf ("%s ", out->tk_str);
   output (out->n);
 }
 
@@ -241,16 +242,16 @@ lex (FILE *f, TkQueue_t *tk)
   _Bool quot = 0;
   _Bool begin = 0;
   size_t t = 0;
-  size_t i = 0; 
+  size_t i = 0;
   size_t tk_l = 1;
   char *breaks = " ;\n\'\"[]+-><=";
-  char c; 
-  char tk_str_aux[126]; 
+  char c;
+  char tk_str_aux[126];
   char tk_str[126];
 
   while ((c = getc (f)) != EOF)
     {
-      if (c == '(' || c == ')')
+      if ((c == '(' && !begin) || (c == ')' && !begin))
         continue;
       tk_str_aux[i++] = c;
       size_t j;
@@ -274,16 +275,25 @@ lex (FILE *f, TkQueue_t *tk)
               tk_l++;
             }
 
-          if (strcmp(tk_str_aux, "@begin") == 0) {
-            begin = 1;
-          }
-
-
           tk_str_aux[i] = '\0';
+
+          if (strcmp (tk_str_aux, "@begin") == 0)
+            {
+              begin = 1;
+            }
+          else if (strcmp (tk_str_aux, "@end") == 0)
+            {
+              begin = 0;
+            }
+
           strcpy (tk_str, tk_str_aux);
           t = get_tk_id (tk_str);
 
-          if (tk_str[0] != '\0' && tk_str[0] != '\n')
+          if (begin)
+            {
+              push (tk, tk_str, t, tk_l);
+            }
+          else if (tk_str[0] != '\0' && tk_str[0] != '\n')
             {
               push (tk, tk_str, t, tk_l);
             }
@@ -314,6 +324,28 @@ TkNode_t *parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list,
                   _Bool if_cond);
 
 _Bool
+_begin (TkNode_t **lex_out, TkQueue_t *ast)
+{
+  TkNode_t *out = *(lex_out);
+  TkNode_t *aux;
+  out = out->n;
+
+  while (out->tk_id != END)
+    {
+      push (ast, out->tk_str, out->tk_id, out->tk_line);
+      aux = out;
+      out = out->n;
+      if (!out)
+        {
+          exit_error (ERROR9, aux);
+        }
+    }
+
+  *(lex_out) = out;
+  return 0;
+}
+
+_Bool
 _import (TkNode_t **lex_out, TkQueue_t *ast)
 {
   TkNode_t *out = *(lex_out);
@@ -328,7 +360,7 @@ _import (TkNode_t **lex_out, TkQueue_t *ast)
     {
       exit_error (ERROR1, out);
     }
-  push (ast, ".h>\n", out->tk_id, out->tk_line);
+  push (ast, ">\n", out->tk_id, out->tk_line);
 
   out = out->n;
   if (!(out) || out->tk_id != SEMICOLON)
@@ -1095,6 +1127,10 @@ parser (TkNode_t *out, TkQueue_t *ast, TkVar_t *var_list, _Bool if_cond)
         {
         case INCLUDE:
           r = _import (&out, ast);
+          aux = out;
+          break;
+        case BEGIN:
+          r = _begin (&out, ast);
           aux = out;
           break;
         case LEFT_KEY:

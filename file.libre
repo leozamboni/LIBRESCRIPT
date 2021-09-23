@@ -1,4 +1,10 @@
-import stdio;
+import stdio.h;
+
+@begin
+
+printf("asdasd");
+return 1;
+@end
 
 uint16 var :3 12;
 string name :3 '1';
