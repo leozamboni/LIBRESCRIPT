@@ -1,3 +1,20 @@
+/*
+ *  LibreScrip pipeline
+ *  Copyright (c) 2021 Leonardo Zamboni
+ * 
+ *  this program is free software: you can redistribute it and/or modify
+ *  it under the terms of the gnu general public license as published by
+ *  the free software foundation, either version 3 of the license, or
+ *  (at your option) any later version.
+ *  
+ *  this program is distributed in the hope that it will be useful,
+ *  but without any warranty; without even the implied warranty of
+ *  merchantability or fitness for a particular purpose.  see the
+ *  gnu general public license for more details.
+ *  
+ *  you should have received a copy of the gnu general public license
+ *  along with this program.  if not, see <http://www.gnu.org/licenses/>.
+ */
 #include <ctype.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -7,7 +24,7 @@
  * Syntax parser errors
  */
 #define exit_error(err, out)                                                  \
-  fprintf (stderr, "ToT\nerror '%s' in line %d, %s.\n", out->tk_str,          \
+  fprintf (stderr, "ToT\nerror '%s' in line %ld, %s.\n", out->tk_str,          \
            out->tk_line, err);                                                \
   return 1;
 
@@ -29,7 +46,7 @@
 #define ERROR_VAR4 "var already allocated"
 
 #define warning(war, str, line)                                               \
-  fprintf (stderr, "-_q\nwarning '%s' in line %d, %s.\n", str, line, war);
+  fprintf (stderr, "-_q\nwarning '%s' in line %ld, %s.\n", str, line, war);
 
 #define NTKS (sizeof (look_table) / sizeof (TkTable_t))
 #define NLIBS 2
@@ -1301,7 +1318,7 @@ parser (TkNode_t *out, POut_t *ast, TkVar_t *var_list, Shfp_t *shfp,
         default:
           if (out->tk_id != ID)
             {
-              fprintf (stderr, "ToT\nerror '%s' in line %d, %s.\n",
+              fprintf (stderr, "ToT\nerror '%s' in line %ld, %s.\n",
                        aux->tk_str, aux->tk_line, ERROR1);
               return NULL;
             }
@@ -1314,7 +1331,7 @@ parser (TkNode_t *out, POut_t *ast, TkVar_t *var_list, Shfp_t *shfp,
     }
   if (if_cond)
     {
-      fprintf (stderr, "ToT\nerror '%s' in line %d, %s.\n", aux->tk_str,
+      fprintf (stderr, "ToT\nerror '%s' in line %ld, %s.\n", aux->tk_str,
                aux->tk_line, ERROR7);
       return NULL;
     }
