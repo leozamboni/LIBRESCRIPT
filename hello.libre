@@ -6,6 +6,9 @@ string hello :3 'Hello, world!';
 printf("%s", hello);
 @end
 
-@shell :teste 
-mkdir teste
+
+@shell :hello 
+echo $1
 @end
+
+$hello;
