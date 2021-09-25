@@ -23,15 +23,16 @@ layout: base
   <div style="text-align: left; ">
     <h2>Hello world in LibreScript</h2>
     <p>LibreScript doesn't have your own stdio yet but you can use the @clang operator to use C stdio functions:</p>
-    <pre class="codeleft"> 
-      import stdio.h;
-  
-      string hello :3 'Hello, world!';
-      
-      @clang
-      printf("%s", hello);
-      @end
-    </pre>
+    <p class="codeleft"> 
+      import stdio.h;<br>
+      <br>
+      <br>
+      string hello :3 'Hello, world!';<br>
+      <br>
+      @clang<br>
+      printf("%s", hello);<br>
+      @end<br>
+    </p>
     <p>Compile:</p>
     <p class="codeleft">librescript hello.libre</p>
   </div>
