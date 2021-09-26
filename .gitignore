@@ -1,12 +1,7 @@
 .clang-format
 .vscode
 
-<<<<<<< HEAD
-/docs/_site
-/docs/.jekyll-cache
-/docs/.jekyll-metadata
-=======
 docs/_site
 docs/.jekyll-cache
 docs/.jekyll-metadata
->>>>>>> aa921f7b2241a78fab34aac47bf8b7adf7f40c68
+
