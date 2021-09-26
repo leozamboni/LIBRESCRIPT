@@ -3,6 +3,8 @@
   margin: 0;
 }
 
+
+
 .code {
   display: table;
   margin: 0px auto 0px auto;
@@ -32,6 +34,9 @@ main div img {
 
 header {
   text-align: center;
+  background: rgb(255,255,255);
+  background: linear-gradient(0deg, rgba(255,255,255,1) 0%, rgba(209,209,209,1) 100%);
+  background-color: gray;
 }
 
 header div {
