@@ -1,4 +1,4 @@
-TARGET=librescript
+TARGET=ancap
 LIBS=
 CC=gcc
 CFLAGS= -pedantic -Wall -std=c99
