@@ -40,6 +40,7 @@
 #define ERROR10 "literal operator can't be nested"
 #define ERROR11 "expected ':' expression for Shell script name"
 #define ERROR12 "script not found"
+#define ERROR13 "expected '*/' expression"
 #define ERROR_VAR1 "unallocated variable"
 #define ERROR_VAR2 "expected var name"
 #define ERROR_VAR3 "incompatible var type"
@@ -75,6 +76,8 @@ enum tokens_enum
   SHELL,
   CLANG,
   END,
+  COMMENT,
+  COMMENT_LEFT,
   SEMICOLON,
   DEF,
   PARENTHESES,
@@ -121,20 +124,20 @@ typedef struct
 } TkTable_t;
 
 static TkTable_t look_table[] = {
-  { SCRIPTRUN, "$" },    { SHELL, "@shell" },    { CLANG, "@clang" },
-  { END, "@end" },       { INCLUDE, "import" },  { SEMICOLON, ";" },
-  { DEF, "def" },        { ASSIGNMENT, ":3" },   { QUOTATION, "\'" },
-  { PARENTHESES, "\"" }, { RIGHT_KEY, "[" },     { LEFT_KEY, "]" },
-  { IF, "if" },          { ELSE, "else" },       { ELSEIF, "elif" },
-  { _TRUE, "true" },     { _FALSE, "false" },    { VOID_T, "void" },
-  { INT8_T, "int8" },    { INT16_T, "int16" },   { INT32_T, "int32" },
-  { INT64_T, "int64" },  { UINT8_T, "uint8" },   { UINT16_T, "uint16" },
-  { UINT16_T, "size" },  { UINT32_T, "uint32" }, { UINT64_T, "uint64" },
-  { CHAR_T, "char" },    { STRING_T, "string" }, { BOOL_T, "bool" },
-  { FLOAT_T, "float" },  { DOUBLE_T, "double" }, { SUM_OP, "+" },
-  { SUB_OP, "-" },       { MULT_OP, "*" },       { DIV_OP, "/" },
-  { OR_OP, "or" },       { GREATER_OP, ">" },    { LESS_OP, "<" },
-  { EQUAL_OP, "equal" },
+  { COMMENT, "/*" },      { COMMENT_LEFT, "*/" }, { SCRIPTRUN, "$" },
+  { SHELL, "@shell" },    { CLANG, "@clang" },    { END, "@end" },
+  { INCLUDE, "import" },  { SEMICOLON, ";" },     { DEF, "def" },
+  { ASSIGNMENT, ":3" },   { QUOTATION, "\'" },    { PARENTHESES, "\"" },
+  { RIGHT_KEY, "[" },     { LEFT_KEY, "]" },      { IF, "if" },
+  { ELSE, "else" },       { ELSEIF, "elif" },     { _TRUE, "true" },
+  { _FALSE, "false" },    { VOID_T, "void" },     { INT8_T, "int8" },
+  { INT16_T, "int16" },   { INT32_T, "int32" },   { INT64_T, "int64" },
+  { UINT8_T, "uint8" },   { UINT16_T, "uint16" }, { UINT16_T, "size" },
+  { UINT32_T, "uint32" }, { UINT64_T, "uint64" }, { CHAR_T, "char" },
+  { STRING_T, "string" }, { BOOL_T, "bool" },     { FLOAT_T, "float" },
+  { DOUBLE_T, "double" }, { SUM_OP, "+" },        { SUB_OP, "-" },
+  { MULT_OP, "*" },       { DIV_OP, "/" },        { OR_OP, "or" },
+  { GREATER_OP, ">" },    { LESS_OP, "<" },       { EQUAL_OP, "equal" },
 };
 
 typedef struct TkListNode
@@ -1325,6 +1328,21 @@ parser (TkNode_t *out, POut_t *ast, TkVar_t *var_list, Shfp_t *shfp,
         case IF:
           r = _conditional (&out, ast, var_list, shfp, IF, "if\0");
           aux = out;
+          break;
+        case COMMENT:
+          push_list (ast, out->tk_str, out->tk_id);
+          while (out->tk_id != COMMENT_LEFT)
+            {
+              push_list (ast, out->tk_str, out->tk_id);
+              out = out->n;
+              if (!out)
+                {
+                  fprintf (stderr, "ToT\nerror '%s' in line %ld, %s.\n",
+                           aux->tk_str, aux->tk_line, ERROR13);
+                  return NULL;
+                }
+            }
+          push_list (ast, out->tk_str, out->tk_id);
           break;
         default:
           if (out->tk_id != ID)

@@ -17,6 +17,7 @@ layout: doc
     - [@clang](#clang)
     - [@shell](#shell)
   - [Imports](#import)
+  - [Comments](#comments)
   - [Conditional statements](#conditional-statements)
   - [Functions](#functions)
 
@@ -130,6 +131,14 @@ you can only call the shell coding after your content declaration with:\
 For import external libs in your main file you need to import at the beginning of the file:\
 `import name_of_file.libre;` \
 now you can use the name_of_file.libre lib
+
+## Comments
+Use /* and */ for create comments on your code
+
+```
+/* variable declaration */
+string hello :3 'Hello, world!';
+```
 
 ## Conditional statements
 if "conditionals" [
