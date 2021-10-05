@@ -1413,6 +1413,7 @@ main (int argc, char **argv)
       puts ("\t^ parser error");
       fclose (f);
       fclose (src);
+      remove ("source.c");
       return 1;
     }
   else
@@ -1433,10 +1434,11 @@ main (int argc, char **argv)
 
   fclose (f);
   fclose (src);
-  system ("gcc -o source source.c");
+  system ("gcc -o source source.c > gcclog.txt");
   system ("source");
   remove ("source.exe");
   remove ("source.c");
+  remove ("gcclog.txt");
 
   char shellname[64];
   TkListNode_t *outshfp = shfp->out;
@@ -1453,6 +1455,11 @@ main (int argc, char **argv)
       remove (shellname);
       outshfp = outshfp->n;
     }
+
+  free (tk);
+  free (ast);
+  free (var_list);
+  free (shfp);
 
   return 0;
 }
