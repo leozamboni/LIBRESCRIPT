@@ -1,17 +1,17 @@
 /*
  *  LibreScrip pipeline
  *  Copyright (c) 2021 Leonardo Zamboni
- * 
+ *
  *  this program is free software: you can redistribute it and/or modify
  *  it under the terms of the gnu general public license as published by
  *  the free software foundation, either version 3 of the license, or
  *  (at your option) any later version.
- *  
+ *
  *  this program is distributed in the hope that it will be useful,
  *  but without any warranty; without even the implied warranty of
  *  merchantability or fitness for a particular purpose.  see the
  *  gnu general public license for more details.
- *  
+ *
  *  you should have received a copy of the gnu general public license
  *  along with this program.  if not, see <http://www.gnu.org/licenses/>.
  */
@@ -24,7 +24,7 @@
  * Syntax parser errors
  */
 #define exit_error(err, out)                                                  \
-  fprintf (stderr, "ToT\nerror '%s' in line %ld, %s.\n", out->tk_str,          \
+  fprintf (stderr, "ToT\nerror '%s' in line %ld, %s.\n", out->tk_str,         \
            out->tk_line, err);                                                \
   return 1;
 
@@ -134,7 +134,7 @@ static TkTable_t look_table[] = {
   { FLOAT_T, "float" },  { DOUBLE_T, "double" }, { SUM_OP, "+" },
   { SUB_OP, "-" },       { MULT_OP, "*" },       { DIV_OP, "/" },
   { OR_OP, "or" },       { GREATER_OP, ">" },    { LESS_OP, "<" },
-  { EQUAL_OP, "=" },
+  { EQUAL_OP, "equal" },
 };
 
 typedef struct TkListNode
@@ -361,7 +361,11 @@ _Bool
 _script (TkNode_t **lex_out, POut_t *ast, Shfp_t *shfp)
 {
   TkNode_t *out = *(lex_out);
+#ifdef __linux__
   char *src = "./";
+#elif __WIN32__
+  char *src = "";
+#endif
   char scrname[126];
 
   push_list (ast, "system(\"", out->tk_id);
@@ -379,7 +383,11 @@ _script (TkNode_t **lex_out, POut_t *ast, Shfp_t *shfp)
   out = out->n;
   if ((out) && out->tk_id == SEMICOLON)
     {
+#ifdef __linux__
       push_list (ast, ".sh\");", SEMICOLON);
+#elif __WIN32__
+      push_list (ast, ".cmd\");", SEMICOLON);
+#endif
     }
   else
     {
@@ -403,8 +411,11 @@ _literal (TkNode_t **lex_out, POut_t *ast, Shfp_t *shfp, size_t id)
       if ((out) && out->tk_str[0] == ':')
         {
           char scrname[64];
+#ifdef __linux__
           char *shext = ".sh";
-
+#elif __WIN32__
+          char *shext = ".cmd";
+#endif
           out->tk_str++;
           out->tk_str[strlen (out->tk_str) - 1] = '\0';
           strcpy (scrname, out->tk_str);
@@ -1390,10 +1401,7 @@ main (int argc, char **argv)
     {
       puts ("^ ^\ncompiled!");
     }
-
   get_source (src, ast->out);
-  // output_list (var_list->out);
-
   // output (tk->out);
   // puts ("");
   // output_list (ast->out);
@@ -1408,8 +1416,25 @@ main (int argc, char **argv)
   fclose (f);
   fclose (src);
   system ("gcc -o source source.c");
-  system ("./source");
-  remove ("source.c");
+  system ("source");
   remove ("source.exe");
+  remove ("source.c");
+
+  char shellname[64];
+  TkListNode_t *outshfp = shfp->out;
+  while (outshfp)
+    {
+#ifdef __linux__
+      char *shext = ".sh";
+#elif __WIN32__
+      char *shext = ".cmd";
+#endif
+      strcpy (shellname, outshfp->var_str);
+      strcat (shellname, shext);
+      shellname[strlen (shellname)] = '\0';
+      remove (shellname);
+      outshfp = outshfp->n;
+    }
+
   return 0;
 }

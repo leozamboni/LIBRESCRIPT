@@ -6,9 +6,8 @@ string hello :3 'Hello, world!';
 printf("%s", hello);
 @end
 
-
 @shell :hello 
-echo $1
+echo "Hello, world!"
 @end
 
 $hello;
