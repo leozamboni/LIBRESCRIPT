@@ -1446,7 +1446,7 @@ main (int argc, char **argv)
     }
   if (!parser (tk->out, ast, var_list, shfp, 0))
     {
-      puts ("\t^ parser error");
+      puts ("\t^~ parser error");
       fclose (f);
       fclose (src);
       remove ("source.c");
