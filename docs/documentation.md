@@ -97,8 +97,9 @@ Operators in LibreScript
 
 |   Type  | Operator |
 |:-------:|:--------:|
-|    Or   |    or    |
-|  Equal  |   equal  |
+|    Or   |    ||    |
+|  OrNot  |    !=    |
+|  Equal  |    ==    |
 | Greater |     >    |
 |   Less  |     <    |
 

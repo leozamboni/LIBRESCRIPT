@@ -113,6 +113,7 @@ enum tokens_enum
   /* Logic */
   OR_OP,
   GREATER_OP,
+  ORNOT_OP,
   LESS_OP,
   EQUAL_OP,
 };
@@ -136,8 +137,9 @@ static TkTable_t look_table[] = {
   { UINT32_T, "uint32" }, { UINT64_T, "uint64" }, { CHAR_T, "char" },
   { STRING_T, "string" }, { BOOL_T, "bool" },     { FLOAT_T, "float" },
   { DOUBLE_T, "double" }, { SUM_OP, "+" },        { SUB_OP, "-" },
-  { MULT_OP, "*" },       { DIV_OP, "/" },        { OR_OP, "or" },
-  { GREATER_OP, ">" },    { LESS_OP, "<" },       { EQUAL_OP, "equal" },
+  { MULT_OP, "*" },       { DIV_OP, "/" },        { OR_OP, "||" },
+  { ORNOT_OP, "!=" },     { GREATER_OP, ">" },    { LESS_OP, "<" },
+  { EQUAL_OP, "==" },
 };
 
 typedef struct TkListNode
@@ -280,7 +282,7 @@ lex (FILE *f, TkQueue_t *tk)
   size_t t = 0;
   size_t i = 0;
   size_t tk_l = 1;
-  char *breaks = " ;\n\'\"[]+-><=$";
+  char *breaks = " ;\n\'\"[]+><$";
   char c;
   char tk_str_aux[126];
   char tk_str[126];
@@ -297,8 +299,8 @@ lex (FILE *f, TkQueue_t *tk)
       if (j != strlen (breaks))
         {
           if ((c == ' ' && !quot && !literal) || (i > 1 && c == '\'')
-              || c == ';' || c == '\n' || c == '\"' || c == '+' || c == '-'
-              || c == '>' || c == '<' || c == '=' || c == '$')
+              || c == ';' || c == '\n' || c == '\"' || c == '+' || c == '>'
+              || c == '<' || c == '$')
             {
               i--;
             }
@@ -338,8 +340,8 @@ lex (FILE *f, TkQueue_t *tk)
             {
               push (tk, "\'", QUOTATION, tk_l);
             }
-          else if (c == ';' || c == '\"' || c == '+' || c == '-' || c == '='
-                   || c == '>' || c == '<' || c == '$')
+          else if (c == ';' || c == '\"' || c == '+' || c == '-' || c == '>'
+                   || c == '<' || c == '$')
             {
               char aux_str[1];
 
@@ -548,13 +550,30 @@ _conditional (TkNode_t **lex_out, POut_t *ast, TkVar_t *var_list, Shfp_t *shfp,
                 }
               else if (!(check_list (var_list->out, out->tk_str)))
                 {
-                  exit_error (ERROR_VAR1, out);
+                  if (out->tk_str[0] == '-')
+                    {
+                      push_list (ast, "-", out->tk_id);
+                      out->tk_str++;
+                      if (!(is_number (out->tk_str)))
+                        {
+                          exit_error (ERROR_VAR1, out);
+                        }
+                    }
+                  else
+                    {
+                      exit_error (ERROR_VAR1, out);
+                    }
                 }
               else if (check_var (var_list->out, out->tk_str, STRING_T))
                 {
                   exit_error (ERROR8, out);
                 }
               push_list (ast, out->tk_str, out->tk_id);
+              out = out->n;
+            }
+          else if (out->tk_id == _TRUE || out->tk_id == _FALSE)
+            {
+              push_list (ast, out->tk_id == _TRUE ? "1" : "0", out->tk_id);
               out = out->n;
             }
           else
@@ -646,7 +665,19 @@ _conditional (TkNode_t **lex_out, POut_t *ast, TkVar_t *var_list, Shfp_t *shfp,
                                   else if (!(check_list (var_list->out,
                                                          out->tk_str)))
                                     {
-                                      exit_error (ERROR_VAR1, out);
+                                      if (out->tk_str[0] == '-')
+                                        {
+                                          push_list (ast, "-", out->tk_id);
+                                          out->tk_str++;
+                                          if (!(is_number (out->tk_str)))
+                                            {
+                                              exit_error (ERROR_VAR1, out);
+                                            }
+                                        }
+                                      else
+                                        {
+                                          exit_error (ERROR_VAR1, out);
+                                        }
                                     }
                                   else if (check_var (var_list->out,
                                                       out->tk_str, STRING_T))
@@ -654,6 +685,14 @@ _conditional (TkNode_t **lex_out, POut_t *ast, TkVar_t *var_list, Shfp_t *shfp,
                                       exit_error (ERROR8, out);
                                     }
                                   push_list (ast, out->tk_str, out->tk_id);
+                                  out = out->n;
+                                }
+                              else if (out->tk_id == _TRUE
+                                       || out->tk_id == _FALSE)
+                                {
+                                  push_list (ast,
+                                             out->tk_id == _TRUE ? "1" : "0",
+                                             out->tk_id);
                                   out = out->n;
                                 }
                               else
@@ -1330,10 +1369,8 @@ parser (TkNode_t *out, POut_t *ast, TkVar_t *var_list, Shfp_t *shfp,
           aux = out;
           break;
         case COMMENT:
-          push_list (ast, out->tk_str, out->tk_id);
           while (out->tk_id != COMMENT_LEFT)
             {
-              push_list (ast, out->tk_str, out->tk_id);
               out = out->n;
               if (!out)
                 {
@@ -1342,7 +1379,6 @@ parser (TkNode_t *out, POut_t *ast, TkVar_t *var_list, Shfp_t *shfp,
                   return NULL;
                 }
             }
-          push_list (ast, out->tk_str, out->tk_id);
           break;
         default:
           if (out->tk_id != ID)

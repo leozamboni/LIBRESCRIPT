@@ -1,0 +1,16 @@
+/* Hello, world in LibreScript */
+import stdio.h;
+
+string hello :3 'Hello, world!';
+bool teste :3 true;
+
+if "teste == false" [
+  @clang
+    printf("%s", hello);
+  @end
+] else [
+  @shell :hello 
+    echo "Hello, world!"
+  @end
+  $hello;
+]

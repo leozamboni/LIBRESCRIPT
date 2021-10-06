@@ -1,7 +1,3 @@
-code {
-  background-color: yellow;
-  display: inline-block;
-}
-
+code { background-color: yellow; display: inline-block; }
 main img[alt=smugface] { height: 200px; }
 main img[alt=the-creation-of-LibreScript] { height: 200px; }
