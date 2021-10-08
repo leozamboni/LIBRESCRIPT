@@ -1471,8 +1471,13 @@ main (int argc, char **argv)
   fclose (f);
   fclose (src);
   system ("gcc -o source source.c > gcclog.txt");
-  system ("source");
-  remove ("source.exe");
+#ifdef __linux__
+      system ("./source");
+      remove ("source");
+#elif __WIN32__
+      system ("source");
+      remove ("source.exe");
+#endif
   remove ("source.c");
   remove ("gcclog.txt");
 
