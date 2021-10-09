@@ -73,6 +73,7 @@ enum tokens_enum
   ID = 1,
   INCLUDE,
   SCRIPTRUN,
+  DEFUN,
   SHELL,
   CLANG,
   END,
@@ -125,21 +126,21 @@ typedef struct
 } TkTable_t;
 
 static TkTable_t look_table[] = {
-  { COMMENT, "/*" },      { COMMENT_LEFT, "*/" }, { SCRIPTRUN, "$" },
-  { SHELL, "@shell" },    { CLANG, "@clang" },    { END, "@end" },
-  { INCLUDE, "import" },  { SEMICOLON, ";" },     { DEF, "def" },
-  { ASSIGNMENT, ":3" },   { QUOTATION, "\'" },    { PARENTHESES, "\"" },
-  { RIGHT_KEY, "[" },     { LEFT_KEY, "]" },      { IF, "if" },
-  { ELSE, "else" },       { ELSEIF, "elif" },     { _TRUE, "true" },
-  { _FALSE, "false" },    { VOID_T, "void" },     { INT8_T, "int8" },
-  { INT16_T, "int16" },   { INT32_T, "int32" },   { INT64_T, "int64" },
-  { UINT8_T, "uint8" },   { UINT16_T, "uint16" }, { UINT16_T, "size" },
-  { UINT32_T, "uint32" }, { UINT64_T, "uint64" }, { CHAR_T, "char" },
-  { STRING_T, "string" }, { BOOL_T, "bool" },     { FLOAT_T, "float" },
-  { DOUBLE_T, "double" }, { SUM_OP, "+" },        { SUB_OP, "-" },
-  { MULT_OP, "*" },       { DIV_OP, "/" },        { OR_OP, "||" },
-  { ORNOT_OP, "!=" },     { GREATER_OP, ">" },    { LESS_OP, "<" },
-  { EQUAL_OP, "==" },
+  { DEFUN, "defun" },    { COMMENT, "/*" },      { COMMENT_LEFT, "*/" },
+  { SCRIPTRUN, "$" },    { SHELL, "@shell" },    { CLANG, "@clang" },
+  { END, "@end" },       { INCLUDE, "import" },  { SEMICOLON, ";" },
+  { DEF, "def" },        { ASSIGNMENT, ":3" },   { QUOTATION, "\'" },
+  { PARENTHESES, "\"" }, { RIGHT_KEY, "[" },     { LEFT_KEY, "]" },
+  { IF, "if" },          { ELSE, "else" },       { ELSEIF, "elif" },
+  { _TRUE, "true" },     { _FALSE, "false" },    { VOID_T, "void" },
+  { INT8_T, "int8" },    { INT16_T, "int16" },   { INT32_T, "int32" },
+  { INT64_T, "int64" },  { UINT8_T, "uint8" },   { UINT16_T, "uint16" },
+  { UINT16_T, "size" },  { UINT32_T, "uint32" }, { UINT64_T, "uint64" },
+  { CHAR_T, "char" },    { STRING_T, "string" }, { BOOL_T, "bool" },
+  { FLOAT_T, "float" },  { DOUBLE_T, "double" }, { SUM_OP, "+" },
+  { SUB_OP, "-" },       { MULT_OP, "*" },       { DIV_OP, "/" },
+  { OR_OP, "||" },       { ORNOT_OP, "!=" },     { GREATER_OP, ">" },
+  { LESS_OP, "<" },      { EQUAL_OP, "==" },
 };
 
 typedef struct TkListNode
@@ -1472,11 +1473,11 @@ main (int argc, char **argv)
   fclose (src);
   system ("gcc -o source source.c > gcclog.txt");
 #ifdef __linux__
-      system ("./source");
-      remove ("source");
+  system ("./source");
+  remove ("source");
 #elif __WIN32__
-      system ("source");
-      remove ("source.exe");
+  system ("source");
+  remove ("source.exe");
 #endif
   remove ("source.c");
   remove ("gcclog.txt");
