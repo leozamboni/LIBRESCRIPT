@@ -50,7 +50,7 @@ output:\
 `Hello, world!`
 
 ## Variables
-Variables in LibreScript variables have permanent values.\
+Variables in LibreScript have permanent values.\
 Global variables are generally declared using the smug construct (:3):
 ```
 string hello :3 'Hello, world!';
