@@ -50,7 +50,7 @@
   fprintf (stderr, "-_q\nwarning '%s' in line %ld, %s.\n", str, line, war);
 
 #define NTKS (sizeof (look_table) / sizeof (TkTable_t))
-#define NLIBS 2
+#define NLIBS 3
 
 _Bool
 is_number (char *s)
@@ -66,6 +66,7 @@ is_number (char *s)
 char *standard_libs[] = {
   "stdio.h",
   "stdlib.h",
+  "stdint.h",
 };
 
 enum tokens_enum
@@ -1429,7 +1430,8 @@ main (int argc, char **argv)
     return 1;
 
   fprintf (src, "#include <stdio.h>\n"
-                "#include <stdlib.h>\n\n"
+                "#include <stdlib.h>\n"
+		"#include <stdint.h>\n"
                 "int main(void)\n"
                 "{\n");
 
