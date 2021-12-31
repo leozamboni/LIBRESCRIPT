@@ -1,9 +1,0 @@
-/* Hello, world in LibreScript */
-import stdio.h;
-
-
-string hello :3 'Hello, world!';
-
-@clang
-  printf("%s", hello);
-@end
