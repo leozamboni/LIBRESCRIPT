@@ -8,12 +8,12 @@ layout: doc
   - [Hello World](#hello-world)
 - References
   - [Variables](#variables)
-    - [Smug construct](#smug-construct)
+    - [Smug operator](#smug-operator)
     - [Data types and size](#data-types-and-size)
   - [Operators](#operators)
     - [Arithmetic](#arithmetic)
     - [Logical](#logical)
-  - [Special constructors](#special-constructors)
+  - [Special operators](#special-operators)
     - [@clang](#clang)
     - [@shell](#shell)
   - [Imports](#import)
@@ -57,8 +57,8 @@ string hello :3 'Hello, world!';
 bool var :3 true;
 ```
 
-## Smug construct
-Smug construct is used to variables assignment.\
+## Smug operator
+Smug operator is used to variables assignment.\
 `int8 var :3 123;`\
 ![smugface](smug-face.png)
 
@@ -103,9 +103,9 @@ Operators in LibreScript
 | Greater |     >    |
 |   Less  |     <    |
 
-## Special constructors
-For now LibreScript only have two special constructors.\
-All special constructors need @end signal when the construct coding ends.
+## Special operators
+For now LibreScript only have two special operators.\
+All special operators need @end signal when the coding ends.
 
 ## @clang
 @clang allows C coding.\
