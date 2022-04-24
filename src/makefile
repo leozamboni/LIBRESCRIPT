@@ -1,4 +1,4 @@
-TARGET=ancap
+TARGET=ls
 LIBS=
 CC=cc
 CFLAGS= -pedantic -Wall -std=c99

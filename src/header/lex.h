@@ -2,8 +2,11 @@
 #define LEX_H
 
 #include "token.h"
+#include "ls.h"
+#include <stdio.h>
 
-Token_t *lex(char *);
+
+Token_t *lex(LS_t **);
 
 
 #endif

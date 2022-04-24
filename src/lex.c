@@ -1,4 +1,5 @@
 #include "header/token.h"
+#include "header/lex.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <ctype.h>
@@ -12,42 +13,42 @@ lex_dtype(char *stdin)
 }
 
 Token_t * 
-lex_number(char *stdin) 
+lex_number(LS_t **ls) 
 {
 	char *key = calloc(1, sizeof(char));
 	do {
 		key = realloc(key, (strlen(key) + 2) * sizeof(char));
-		strcat(key, (char[])
+						strcat(key, (char[])
 		{
-			(*stdin), 0
+			(*(*ls)->lex->stdin), 0
 		});
-	} while (*stdin++ && isdigit(*stdin));
+	} while (*(*ls)->lex->stdin++ && isdigit(*(*ls)->lex->stdin));
 
 	return create_token(key, _number);
 }
 
 Token_t *  
-lex_alpha(char *stdin) 
+lex_alpha(LS_t **ls) 
 {
 	char *key = calloc(1, sizeof(char));
 	do {
 		key = realloc(key, (strlen(key) + 2) * sizeof(char));
 		strcat(key, (char[])
 		{
-			(*stdin), 0
+			(*(*ls)->lex->stdin), 0
 		});
-	} while (*stdin++ && isalpha(*stdin));
+	} while (*(*ls)->lex->stdin++ && isalpha(*(*ls)->lex->stdin));
 
 	return create_token(key, lex_dtype(key));
 }
 
 Token_t *
-lex(char *stdin)
+lex(LS_t **ls)
 {
 	do {
-			if (isalpha(*stdin)) return lex_alpha(stdin);
-			if (isdigit(*stdin)) return lex_number(stdin);
-			switch(*stdin)
+			if (isalpha(*(*ls)->lex->stdin)) return lex_alpha(&(*ls));
+			if (isdigit(*(*ls)->lex->stdin)) return lex_number(&(*ls));
+			switch(*(*ls)->lex->stdin)
 			{
 				case ' ':
 				case '\t':
@@ -58,11 +59,11 @@ lex(char *stdin)
 				case '/': return create_token(NULL, _slash); 
 				case ';': return create_token(NULL, _semicolon); 
 				case ':':
-					if (*stdin + 1 == '3') return create_token(NULL, _smug); 
+					if (*(*ls)->lex->stdin + 1 == '3') return create_token(NULL, _smug); 
 			}
 
 	}
-	while (*stdin++);
+	while (*(*ls)->lex->stdin++);
 
 	return NULL;
 }
