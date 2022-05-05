@@ -10,7 +10,7 @@ init(LS_t **ls)
 {
 	(*ls) = malloc(sizeof(LS_t));
 	(*ls)->lex = malloc(sizeof(Lex_t));
-	(*ls)->lex->i = 0;
+	(*ls)->lex->i = 1;
 }
 
 void
@@ -20,17 +20,17 @@ setstdin(LS_t **ls, char *stdin)
 	strcpy((*ls)->lex->stdin, stdin);
 }
 
-
 void
 ls() 
 {
 	LS_t *ls;
 	init(&ls);
 
-	setstdin(&ls, "int a :3 123;");
+	setstdin(&ls, "int8 var, varB :3\n10;");
 
-	printf("%s\n", ls->lex->stdin);
-	Token_t *tk = lex(&ls);
-	printf("%u\n", tk->type);
-	printf("%s\n", ls->lex->stdin);
+	//printf("%s\n", ls->lex->stdin);
+	//Token_t *tk = lex(&ls->lex);
+	parser(&ls->lex);
+
+	//printf("%s\n", ls->lex->stdin);
 }

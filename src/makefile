@@ -1,7 +1,7 @@
 TARGET=ls
 LIBS=
 CC=cc
-CFLAGS= -pedantic -Wall -std=c99
+CFLAGS= -pedantic -std=c99
 
 OBJECTS = $(patsubst %.c, %.o, $(wildcard *.c))
 HEADERS = $(wildcard *.h)

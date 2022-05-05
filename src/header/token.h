@@ -3,18 +3,20 @@
 
 
 enum token_type {
-	_int,
-	_char,
-	_void,
-	_float,
-	_string,
-	_number,
-	_plus,
-	_minus,
-	_slash,
-	_asterisk,
-	_smug,
-	_semicolon,
+	int_,
+	id_,
+	char_,
+	void_,
+	float_,
+	string_,
+	number_,
+	plus_,
+	minus_,
+	slash_,
+	asterisk_,
+	smug_,
+	semicolon_,
+	dot_,
 };
 
 typedef enum token_type TokenType_t;

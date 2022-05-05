@@ -8,62 +8,64 @@
 TokenType_t 
 lex_dtype(char *stdin)
 {
-	if (strcmp(stdin, "int") == 0) return _int;
-	return _string;
+	if (strcmp(stdin, "int8") == 0) return int_;
+	return id_;
 }
 
 Token_t * 
-lex_number(LS_t **ls) 
+lex_number(Lex_t **lex) 
 {
 	char *key = calloc(1, sizeof(char));
 	do {
 		key = realloc(key, (strlen(key) + 2) * sizeof(char));
 						strcat(key, (char[])
 		{
-			(*(*ls)->lex->stdin), 0
+			(*(*lex)->stdin), 0
 		});
-	} while (*(*ls)->lex->stdin++ && isdigit(*(*ls)->lex->stdin));
-
-	return create_token(key, _number);
+	} while (*(*lex)->stdin++ && isdigit(*(*lex)->stdin));
+	return create_token(key, number_);
 }
 
 Token_t *  
-lex_alpha(LS_t **ls) 
+lex_alpha(Lex_t **lex) 
 {
 	char *key = calloc(1, sizeof(char));
 	do {
 		key = realloc(key, (strlen(key) + 2) * sizeof(char));
 		strcat(key, (char[])
 		{
-			(*(*ls)->lex->stdin), 0
+			(*(*lex)->stdin), 0
 		});
-	} while (*(*ls)->lex->stdin++ && isalpha(*(*ls)->lex->stdin));
-
+	} while (*(*lex)->stdin++ && isalpha(*(*lex)->stdin));
 	return create_token(key, lex_dtype(key));
 }
 
 Token_t *
-lex(LS_t **ls)
+lex(Lex_t **lex)
 {
 	do {
-			if (isalpha(*(*ls)->lex->stdin)) return lex_alpha(&(*ls));
-			if (isdigit(*(*ls)->lex->stdin)) return lex_number(&(*ls));
-			switch(*(*ls)->lex->stdin)
+			if (isalpha(*(*lex)->stdin)) return lex_alpha(&(*lex));
+			if (isdigit(*(*lex)->stdin)) return lex_number(&(*lex));
+			switch(*(*lex)->stdin)
 			{
 				case ' ':
 				case '\t':
 					break;
-				case '+': return create_token(NULL, _plus); 
-				case '-': return create_token(NULL, _minus); 
-				case '*': return create_token(NULL, _asterisk); 
-				case '/': return create_token(NULL, _slash); 
-				case ';': return create_token(NULL, _semicolon); 
+				case '\n':
+					(*lex)->i++;
+					break;
+				case '+': *(*lex)->stdin++; return create_token(NULL, plus_); 
+				case '-': *(*lex)->stdin++; return create_token(NULL, minus_); 
+				case '*': *(*lex)->stdin++; return create_token(NULL, asterisk_); 
+				case '/': *(*lex)->stdin++; return create_token(NULL, slash_); 
+				case ';': *(*lex)->stdin++; return create_token(NULL, semicolon_); 
+				case ',': *(*lex)->stdin++; return create_token(NULL, dot_); 
 				case ':':
-					if (*(*ls)->lex->stdin + 1 == '3') return create_token(NULL, _smug); 
+					if (*((*lex)->stdin += 1) == '3' && *(*lex)->stdin++) return create_token(NULL, smug_);
 			}
 
 	}
-	while (*(*ls)->lex->stdin++);
+	while (*(*lex)->stdin++);
 
 	return NULL;
 }

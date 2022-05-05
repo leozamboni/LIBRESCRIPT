@@ -2,11 +2,16 @@
 #define LEX_H
 
 #include "token.h"
-#include "ls.h"
 #include <stdio.h>
 
+typedef struct lex Lex_t;
 
-Token_t *lex(LS_t **);
+struct lex
+{
+    size_t i;
+    char *stdin;
+};
 
+Token_t *lex(Lex_t **);
 
 #endif

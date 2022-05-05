@@ -2,16 +2,8 @@
 #define LS_H
 
 #include "lex.h"
+#include "parser.h"
 #include <stdio.h>
-
-typedef struct lex Lex_t;
-
-struct lex {
-	size_t i;
-	char *stdin;
-};
-
-
 
 typedef struct ls LS_t;
 
