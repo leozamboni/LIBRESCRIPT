@@ -26,6 +26,7 @@
 %type<num> exp;
 %type<num> term;
 %type<bl> cond;
+%type<bl> truefalse;
 
 /* rules */
 %%
@@ -73,11 +74,21 @@ INT8
 | DOUBLE
 ;
 
+truefalse:
+TRUE                        { $$ = 1; }
+| FALSE                     { $$ = 0; } 
+;
+
 cond:
-TRUE                              {   $$ = 1;         }
-| FALSE                           {   $$ = 0;         }
+truefalse                                               
 | ID                              {   $$ = $1;        }
+| NUMBER                          {   $$ = $1;        }
 | NOT ID                          {   $$ = !$2;       }
+| NOT truefalse                   {   $$ = !$2;       }
+| '(' truefalse ')'               {   $$ = 1;         }
+| '(' ID ')'                      {   $$ = $2;        }
+| '(' NOT ID ')'                  {   $$ = !$3;       }
+| '(' NOT truefalse ')'           {   $$ = !$3;       }
 | cond EQUAL cond                 {   $$ = $1 == $3;  }
 | cond AND cond                   {   $$ = $1 && $3;  }
 | cond OR cond                    {   $$ = $1 && $3;  }
@@ -97,19 +108,21 @@ TRUE                              {   $$ = 1;         }
 ;
 
 if:
-IF cond 
+IF cond '{' block '}'
+| '(' IF cond ')' '{' block '}'
+;
+
+block: 
+line
 ;
 
 term:
 LET ID ':' dtype '=' exp ';'            { push_symbol_table($ID, $exp);             }
 | LET ID ':' dtype ';'                  { push_symbol_table($ID, 0);                }
 | LET ID ':' BOOL  '=' cond ';'         { push_symbol_table($ID, $cond);            }  
-| LET ID ':' BOOL  '=' TRUE ';'         { push_symbol_table($ID, 1);                }  
-| LET ID ':' BOOL  '=' FALSE ';'        { push_symbol_table($ID, 0);                }  
+| '(' LET ID ':' dtype '=' cond ')'     { push_symbol_table($ID, $cond);             }  
 | '(' LET ID ':' dtype '=' exp ')'      { push_symbol_table($ID, $exp);             }     
 | '(' LET ID ':' dtype ')'              { push_symbol_table($ID, 0);                }
-| '(' LET ID ':' BOOL  '=' TRUE ')'     { push_symbol_table($ID, 1);                }  
-| '(' LET ID ':' BOOL  '=' FALSE ')'    { push_symbol_table($ID, 0);                }  
 ;
 
 %%
